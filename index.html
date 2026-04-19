@@ -1,0 +1,288 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Vellum Atelier</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar" aria-label="Project navigation">
+        <div class="brand">
+          <img
+            class="brand-image"
+            src="https://images.unsplash.com/photo-1513364776144-60967b0f800f?auto=format&fit=crop&w=240&q=80"
+            alt="Paintbrushes in a studio"
+          />
+          <div>
+            <p class="eyebrow">Research writing studio</p>
+            <h1>Vellum Atelier</h1>
+            <p class="brand-copy">For thesis chapters, articles, and literature work.</p>
+          </div>
+        </div>
+
+        <div class="quick-actions">
+          <button id="newDocumentButton" class="primary-button" type="button">
+            New draft
+          </button>
+          <button id="newFolderButton" class="ghost-button" type="button">
+            Folder
+          </button>
+        </div>
+        <div id="folderInlinePanel" class="folder-inline-panel" hidden>
+          <label for="folderNameInput">Folder name</label>
+          <input id="folderNameInput" type="text" placeholder="e.g. Literature review" />
+          <button id="saveFolderButton" class="primary-button" type="button">
+            Create folder
+          </button>
+        </div>
+
+        <nav>
+          <p class="nav-title">Library</p>
+          <div id="documentList" class="document-list"></div>
+        </nav>
+
+        <section class="sync-panel" aria-labelledby="syncTitle">
+          <h2 id="syncTitle">Export & links</h2>
+          <p id="syncState">Saved locally</p>
+          <button id="exportButton" class="ghost-button" type="button">
+            Export .doc
+          </button>
+          <button id="googleButton" class="ghost-button" type="button">
+            Link Google Doc
+          </button>
+          <div id="googleInlinePanel" class="google-inline-panel" hidden>
+            <label for="googleDocLinkInlineInput">Google Docs edit link</label>
+            <input
+              id="googleDocLinkInlineInput"
+              type="url"
+              placeholder="https://docs.google.com/document/d/.../edit"
+            />
+            <p id="googleInlineMessage">Paste a shared edit link, then save it.</p>
+            <button id="saveGoogleDocInlineButton" class="primary-button" type="button">
+              Save Google link
+            </button>
+          </div>
+          <button id="githubButton" class="ghost-button" type="button">
+            Link GitHub repository
+          </button>
+          <div id="githubInlinePanel" class="google-inline-panel" hidden>
+            <label for="githubRepoInput">GitHub repository URL</label>
+            <input
+              id="githubRepoInput"
+              type="text"
+              placeholder="https://github.com/you/thesis-writing.git or git@github.com:you/thesis-writing.git"
+            />
+            <p id="githubSyncMessage">Pushes every 110 seconds when the local sync helper is running. SSH URLs are usually easiest on a Mac.</p>
+            <button id="saveGithubRepoButton" class="primary-button" type="button">
+              Save GitHub link
+            </button>
+            <button id="pullGithubRepoButton" class="ghost-button" type="button">
+              Pull latest
+            </button>
+          </div>
+        </section>
+      </aside>
+
+      <main class="workspace">
+        <header class="topbar">
+          <div>
+            <label for="docTitle">Current draft</label>
+            <input id="docTitle" type="text" autocomplete="off" />
+          </div>
+          <div class="topbar-controls">
+            <div class="field-chip">
+              <span>Mode</span>
+              <select id="projectMode">
+                <option value="thesis">PhD thesis</option>
+                <option value="article">Journal article</option>
+                <option value="proposal">Research proposal</option>
+                <option value="literature-review">Literature review</option>
+              </select>
+            </div>
+            <div class="field-chip">
+              <span>Status</span>
+              <select id="docStatus">
+                <option value="Draft">Draft</option>
+                <option value="Revising">Revising</option>
+                <option value="Supervisor review">Supervisor review</option>
+                <option value="Ready">Ready</option>
+              </select>
+            </div>
+            <div class="format-controls" aria-label="Citation style">
+              <button class="style-button active" data-style="apa" type="button">
+                APA
+              </button>
+              <button class="style-button" data-style="harvard" type="button">
+                Harvard
+              </button>
+            </div>
+            <button id="themeToggleButton" class="style-button" type="button">
+              Dark mode on
+            </button>
+          </div>
+        </header>
+
+        <section class="editor-stage" aria-label="Document editor">
+          <div id="editor" class="editor" contenteditable="true" spellcheck="true"></div>
+        </section>
+
+        <footer class="metrics-bar" aria-label="Document counts">
+          <span><strong id="wordCount">0</strong> words</span>
+          <span><strong id="charCount">0</strong> characters</span>
+          <span><strong id="citationCount">0</strong> citations</span>
+          <span><strong id="topicLabel">Topic:</strong> waiting for text</span>
+          <span class="credit">tinkered by Tiago Martins Pinto</span>
+        </footer>
+      </main>
+
+      <aside class="assistant-panel" aria-label="Writing assistant">
+        <div class="assistant-header">
+          <p class="eyebrow">Research desk</p>
+          <h2>Context, sources, revision</h2>
+        </div>
+        <div class="tabs" role="tablist">
+          <button class="tab active" data-tab="references" type="button">Focus</button>
+          <button class="tab" data-tab="sources" type="button">Sources</button>
+          <button class="tab" data-tab="plan" type="button">Plan</button>
+          <button class="tab" data-tab="checks" type="button">Review</button>
+          <button class="tab" data-tab="rewrite" type="button">Rewrite</button>
+        </div>
+
+        <section id="referencesPanel" class="panel active-panel">
+          <div class="panel-heading">
+            <div>
+              <p class="eyebrow">Focus map</p>
+              <h2 id="referenceTopic">Start writing</h2>
+            </div>
+            <button id="refreshReferencesButton" class="small-button" type="button">
+              Refresh
+            </button>
+          </div>
+          <div id="focusOptions" class="focus-options"></div>
+          <div id="referenceList" class="reference-list"></div>
+          <div class="search-box">
+            <input id="referenceSearch" type="search" placeholder="Search OpenAlex or Crossref" />
+            <button id="onlineSearchButton" class="small-button" type="button">Search</button>
+          </div>
+          <p class="fine-print">Suggestions use reliable metadata sources and your current draft context.</p>
+        </section>
+
+        <section id="sourcesPanel" class="panel">
+          <div class="panel-heading">
+            <div>
+              <p class="eyebrow">Live cross-check</p>
+              <h2>Possible citations</h2>
+            </div>
+            <span id="sourceCheckStatus" class="status-pill">Watching</span>
+          </div>
+          <div id="sourceCheckList" class="check-list"></div>
+          <div class="reading-heading">
+            <p class="eyebrow">Read next</p>
+            <h2>Suggested articles</h2>
+          </div>
+          <div id="readingList" class="reading-list"></div>
+          <p class="fine-print">
+            This flags citation needs and possible source overlap while you
+            write. It is a research aid, not a legal plagiarism report.
+          </p>
+        </section>
+
+        <section id="planPanel" class="panel">
+          <div class="panel-heading">
+            <div>
+              <p class="eyebrow">PhD structure</p>
+              <h2>Project plan</h2>
+            </div>
+            <button id="addLiteratureRowButton" class="small-button" type="button">Add source</button>
+          </div>
+          <div class="plan-form">
+            <label for="researchQuestionInput">Main research question</label>
+            <textarea id="researchQuestionInput" placeholder="What is the central question this project answers?"></textarea>
+            <label for="subQuestionsInput">Sub-questions</label>
+            <textarea id="subQuestionsInput" placeholder="One sub-question per line"></textarea>
+            <label for="methodologyInput">Methodology</label>
+            <textarea id="methodologyInput" placeholder="e.g. arts-based research, a/r/tography, interviews, visual analysis"></textarea>
+            <label for="contributionInput">Contribution</label>
+            <textarea id="contributionInput" placeholder="What does this project add to art education?"></textarea>
+          </div>
+          <div class="reading-heading">
+            <p class="eyebrow">Literature review</p>
+            <h2>Matrix</h2>
+          </div>
+          <div id="literatureMatrix" class="literature-matrix"></div>
+        </section>
+
+        <section id="checksPanel" class="panel">
+          <div class="panel-heading">
+            <div>
+              <p class="eyebrow">Review</p>
+              <h2>Writing checks</h2>
+            </div>
+            <button id="runChecksButton" class="small-button" type="button">Run</button>
+          </div>
+          <div id="checkList" class="check-list"></div>
+        </section>
+
+        <section id="rewritePanel" class="panel">
+          <div class="panel-heading">
+            <div>
+              <p class="eyebrow">Draft support</p>
+              <h2>Revise selected text</h2>
+            </div>
+          </div>
+          <div class="rewrite-actions">
+            <button data-rewrite="clarity" type="button">Clarify</button>
+            <button data-rewrite="academic" type="button">More academic</button>
+            <button data-rewrite="concise" type="button">Shorten</button>
+            <button data-rewrite="reflective" type="button">Reflective voice</button>
+          </div>
+          <textarea id="rewriteOutput" readonly placeholder="Select text in the editor, then choose a rewrite mode."></textarea>
+          <button id="replaceSelectionButton" class="primary-button" type="button">
+            Replace selection
+          </button>
+        </section>
+      </aside>
+    </div>
+
+    <dialog id="googleDialog">
+      <form method="dialog">
+        <h2>Link Google Doc</h2>
+        <p>
+          Paste the shared Google Docs editing link for this draft. The app
+          will remember it, open it for editing, and help you move text between
+          the local draft and Google Docs.
+        </p>
+        <label for="googleDocLinkInput">Google Docs edit link</label>
+        <input
+          id="googleDocLinkInput"
+          type="url"
+          placeholder="https://docs.google.com/document/d/.../edit"
+        />
+        <p id="googleDocIdDisplay" class="fine-print">No document linked yet.</p>
+        <p class="fine-print">
+          A public edit link allows human editing in Google Docs. Automatic
+          write-back through the official Google Docs API still requires Google
+          OAuth permission.
+        </p>
+        <div class="dialog-actions">
+          <button id="importGoogleDocButton" type="button" class="ghost-button">
+            Try import text
+          </button>
+          <button id="unlinkGoogleDocButton" type="button" class="ghost-button">
+            Unlink
+          </button>
+        </div>
+        <menu>
+          <button value="cancel" class="ghost-button">Close</button>
+          <button id="saveGoogleDocLinkButton" value="default" class="primary-button">
+            Save link
+          </button>
+        </menu>
+      </form>
+    </dialog>
+
+    <script src="app.js"></script>
+  </body>
+</html>
