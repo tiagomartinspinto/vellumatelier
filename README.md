@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Vellum Atelier
 
 A local-first research writing studio for thesis chapters, academic articles, and literature work.
@@ -70,3 +71,6 @@ The plagiarism feature is currently a live similarity and citation-risk aid. A p
 Shared Google Docs edit links are supported only as linked document metadata. Automatic write-back to Google Docs was removed from this prototype because it requires OAuth/API permissions and is not a good simple save model.
 
 The recommended next save model is Git/GitHub-backed versioning: local files, snapshots, commit history, and optional GitHub remote backup.
+=======
+# vellumatelier
+>>>>>>> 2a0f533596b9aa135f6c41b7a1a8172721c25f39
