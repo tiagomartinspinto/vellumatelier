@@ -173,7 +173,8 @@ h2 {
 .primary-button,
 .ghost-button,
 .small-button,
-.style-button,
+.citation-style-button,
+.toolbar-button,
 .tab,
 .rewrite-actions button {
   min-height: 36px;
@@ -199,7 +200,8 @@ h2 {
 
 .ghost-button,
 .small-button,
-.style-button,
+.citation-style-button,
+.toolbar-button,
 .tab,
 .rewrite-actions button {
   border: 1px solid var(--line);
@@ -209,7 +211,8 @@ h2 {
 
 .ghost-button:hover,
 .small-button:hover,
-.style-button:hover,
+.citation-style-button:hover,
+.toolbar-button:hover,
 .tab:hover,
 .rewrite-actions button:hover {
   background: rgba(210, 213, 218, 0.12);
@@ -403,13 +406,17 @@ h2 {
 
 .topbar {
   display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 18px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 16px;
   align-items: start;
   padding: 18px 28px 14px;
   background: rgba(15, 22, 24, 0.72);
   border-bottom: 1px solid var(--line);
   backdrop-filter: blur(18px);
+}
+
+.topbar-title {
+  min-width: 0;
 }
 
 .topbar label {
@@ -445,6 +452,7 @@ h2 {
   flex-wrap: wrap;
   gap: 8px;
   align-items: center;
+  justify-content: flex-end;
 }
 
 .field-chip {
@@ -493,31 +501,96 @@ h2 {
   border-color: rgba(226, 229, 232, 0.45);
 }
 
-.style-button.active {
+.citation-style-button.active {
   background: var(--accent);
   color: #101718;
+}
+
+.theme-toggle {
+  white-space: nowrap;
+}
+
+.editor-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  padding: 10px 28px 14px;
+  background: rgba(11, 13, 15, 0.74);
+  border-bottom: 1px solid var(--line);
+  backdrop-filter: blur(18px);
+}
+
+.toolbar-group {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.toolbar-label {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.editor-toolbar select {
+  min-height: 34px;
+  padding: 0 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--ink);
+}
+
+.toolbar-button {
+  min-width: 36px;
+  padding: 0 10px;
+}
+
+.toolbar-zoom {
+  margin-left: auto;
+}
+
+.toolbar-zoom span {
+  min-width: 48px;
+  color: var(--text-soft);
+  font-size: 0.84rem;
+  font-weight: 800;
+  text-align: center;
 }
 
 .editor-stage {
   min-height: 0;
   overflow: auto;
-  padding: 28px clamp(18px, 5vw, 72px);
+  padding: 28px clamp(18px, 5vw, 72px) 48px;
   background: linear-gradient(180deg, rgba(210, 213, 218, 0.035), transparent 28%);
 }
 
+.page-canvas {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  min-width: 100%;
+}
+
 .editor {
-  max-width: 850px;
+  width: min(100%, var(--doc-page-width, 880px));
   min-height: calc(100vh - 190px);
   margin: 0 auto;
-  padding: clamp(30px, 6vw, 68px);
+  padding: var(--doc-page-padding, clamp(30px, 6vw, 68px));
   background: var(--editor-paper);
   border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 8px;
   box-shadow: var(--shadow);
   color: var(--editor-ink);
-  font-family: Georgia, "Times New Roman", serif;
-  font-size: 1.08rem;
-  line-height: 1.75;
+  font-family: var(--doc-font-family, Georgia), "Times New Roman", serif;
+  font-size: var(--doc-font-size, 1.08rem);
+  line-height: var(--doc-line-height, 1.75);
   outline: none;
 }
 
@@ -544,6 +617,88 @@ h2 {
 .editor mark.topic-trigger {
   background: #d5d7da;
   box-shadow: inset 0 -2px 0 #767c84;
+}
+
+.editor .citation-token {
+  display: inline-flex;
+  align-items: center;
+  margin: 0 2px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: rgba(72, 76, 83, 0.12);
+  box-shadow: inset 0 0 0 1px rgba(72, 76, 83, 0.18);
+  color: var(--editor-ink);
+  font-size: 0.92em;
+  white-space: nowrap;
+}
+
+.editor .page-break,
+.editor .bibliography-page {
+  margin-top: 38px;
+}
+
+.editor .page-break {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: #666b72;
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.editor .page-break::before,
+.editor .page-break::after {
+  flex: 1;
+  height: 1px;
+  background: rgba(40, 44, 48, 0.18);
+  content: "";
+}
+
+.editor .bibliography-page {
+  padding-top: 18px;
+  border-top: 1px solid rgba(40, 44, 48, 0.12);
+}
+
+.editor .bibliography-page h2 {
+  margin-bottom: 18px;
+}
+
+.editor .bibliography-entry {
+  margin: 0 0 14px;
+}
+
+.editor-context-menu {
+  position: fixed;
+  z-index: 40;
+  width: min(320px, calc(100vw - 24px));
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(16, 18, 22, 0.96);
+  box-shadow: 0 18px 36px rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(20px);
+}
+
+.editor-context-menu button {
+  width: 100%;
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--ink);
+  text-align: left;
+}
+
+.editor-context-menu button:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.context-menu-title {
+  padding: 4px 8px 8px;
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 800;
 }
 
 .metrics-bar {
@@ -687,6 +842,61 @@ h2 {
   gap: 8px;
 }
 
+.selection-box,
+.zotero-box {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 14px;
+  padding: 13px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.selection-preview {
+  margin: 0;
+  color: var(--text-soft);
+  line-height: 1.45;
+}
+
+.selection-citation-list {
+  display: grid;
+  gap: 8px;
+}
+
+.selection-citation-list button {
+  justify-content: flex-start;
+}
+
+.zotero-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.zotero-grid label {
+  display: grid;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+
+.zotero-grid .span-2 {
+  grid-column: span 2;
+}
+
+.zotero-grid input,
+.zotero-grid select {
+  min-height: 38px;
+  width: 100%;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--ink);
+}
+
 .plan-form label,
 .matrix-row label {
   color: var(--muted);
@@ -762,6 +972,10 @@ h2 {
   margin: 0 0 6px;
   font-size: 0.96rem;
   line-height: 1.3;
+}
+
+.reference-card.zotero-card {
+  border-color: rgba(198, 185, 141, 0.24);
 }
 
 .reference-card p,
@@ -958,15 +1172,23 @@ dialog menu {
   }
 
   .topbar-controls {
-    grid-template-columns: 1fr;
+    justify-content: flex-start;
   }
 
   .format-controls {
     width: 100%;
   }
 
-  .style-button {
+  .citation-style-button {
     flex: 1;
+  }
+
+  .editor-toolbar {
+    padding: 10px 14px 12px;
+  }
+
+  .toolbar-zoom {
+    margin-left: 0;
   }
 
   .editor-stage {
@@ -982,13 +1204,22 @@ dialog menu {
   .matrix-row {
     grid-template-columns: 1fr;
   }
+
+  .zotero-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .zotero-grid .span-2 {
+    grid-column: auto;
+  }
 }
 
 @media (max-width: 560px) {
   .sidebar,
   .assistant-panel,
   .topbar-controls .field-chip,
-  .topbar-controls .format-controls {
+  .topbar-controls .format-controls,
+  .desktop-only {
     display: none;
   }
 
@@ -999,6 +1230,20 @@ dialog menu {
 
   .topbar {
     padding: 12px;
+  }
+
+  .editor-toolbar {
+    gap: 8px;
+    padding: 10px 12px;
+  }
+
+  .toolbar-group {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .toolbar-zoom {
+    margin-left: 0;
   }
 
   #docTitle {

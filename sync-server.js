@@ -46,7 +46,20 @@ function runGit(args) {
   });
 }
 
-async function ensureGit(repoUrl) {
+async function ensureBranch(branch = "main") {
+  if (!branch) return;
+  const current = (await runGit(["branch", "--show-current"])).trim();
+  if (current === branch) return;
+
+  try {
+    await runGit(["rev-parse", "--verify", branch]);
+    await runGit(["checkout", branch]);
+  } catch {
+    await runGit(["checkout", "-b", branch]);
+  }
+}
+
+async function ensureGit(repoUrl, branch = "main") {
   repoUrl = normalizeRepoUrl(repoUrl);
   if (!fs.existsSync(path.join(root, ".git"))) {
     await runGit(["init"]);
@@ -72,6 +85,8 @@ async function ensureGit(repoUrl) {
       await runGit(["remote", "add", "origin", repoUrl]);
     }
   }
+
+  await ensureBranch(branch);
 }
 
 function slug(value) {
@@ -183,8 +198,8 @@ function escapeHtml(value) {
     .replaceAll('"', "&quot;");
 }
 
-async function commitAndPush(reason, repoUrl) {
-  await ensureGit(repoUrl);
+async function commitAndPush(reason, repoUrl, branch = "main") {
+  await ensureGit(repoUrl, branch);
   await runGit(["add", "github-export", "README.md", "index.html", "styles.css", "app.js", "sync-server.js"]);
 
   const status = await runGit(["status", "--porcelain"]);
@@ -196,8 +211,8 @@ async function commitAndPush(reason, repoUrl) {
   await runGit(["commit", "-m", `Save Vellum Atelier draft (${reason}, ${stamp})`]);
 
   try {
-    const branch = (await runGit(["branch", "--show-current"])).trim() || "main";
-    await runGit(["push", "-u", "origin", branch]);
+    const activeBranch = (await runGit(["branch", "--show-current"])).trim() || branch || "main";
+    await runGit(["push", "-u", "origin", activeBranch]);
     return `Committed and pushed to GitHub at ${stamp}.`;
   } catch (error) {
     return `Committed locally, but push failed: ${friendlyGitPushError(
@@ -213,7 +228,7 @@ function friendlyGitPushError(output, repoUrl = "") {
     const sshUrl = httpsGithubToSsh(repoUrl);
     return [
       "GitHub needs credentials for HTTPS.",
-      sshUrl ? `Use this SSH URL instead if your Mac has a GitHub SSH key: ${sshUrl}` : "",
+      sshUrl ? `Use this SSH URL instead if this device already has a GitHub SSH key: ${sshUrl}` : "",
       "Or authenticate HTTPS with GitHub Desktop, Git Credential Manager, or a personal access token.",
     ]
       .filter(Boolean)
@@ -221,7 +236,7 @@ function friendlyGitPushError(output, repoUrl = "") {
   }
 
   if (text.includes("Permission denied") && text.includes("publickey")) {
-    return "GitHub rejected the SSH key. Add this Mac's SSH key to GitHub or use an authenticated HTTPS remote.";
+    return "GitHub rejected the SSH key. Add this device's SSH key to GitHub or use an authenticated HTTPS remote.";
   }
 
   return text;
@@ -248,7 +263,7 @@ const server = http.createServer(async (req, res) => {
       const payload = JSON.parse(await readBody(req));
       payload.repoUrl = normalizeRepoUrl(payload.repoUrl);
       fs.writeFileSync(configPath, JSON.stringify(payload, null, 2));
-      await ensureGit(payload.repoUrl);
+      await ensureGit(payload.repoUrl, payload.branch || "main");
       sendJson(res, 200, {
         ok: true,
         message: "GitHub repository saved. Pushes will run every 110 seconds.",
@@ -262,9 +277,10 @@ const server = http.createServer(async (req, res) => {
         ? JSON.parse(fs.readFileSync(configPath, "utf8"))
         : {};
       const repoUrl = normalizeRepoUrl(payload.repoUrl || config.repoUrl);
+      const branch = payload.branch || config.branch || "main";
 
       writeSnapshot(payload);
-      const message = await commitAndPush(payload.reason || "auto", repoUrl);
+      const message = await commitAndPush(payload.reason || "auto", repoUrl, branch);
       sendJson(res, 200, { ok: true, message });
       return;
     }
@@ -275,11 +291,12 @@ const server = http.createServer(async (req, res) => {
         ? JSON.parse(fs.readFileSync(configPath, "utf8"))
         : {};
       const repoUrl = normalizeRepoUrl(payload.repoUrl || config.repoUrl);
+      const branch = payload.branch || config.branch || "main";
 
-      await ensureGit(repoUrl);
+      await ensureGit(repoUrl, branch);
       try {
-        const branch = (await runGit(["branch", "--show-current"])).trim() || "main";
-        await runGit(["pull", "--ff-only", "origin", branch]);
+        const activeBranch = (await runGit(["branch", "--show-current"])).trim() || branch;
+        await runGit(["pull", "--ff-only", "origin", activeBranch]);
       } catch (error) {
         sendJson(res, 200, {
           ok: false,

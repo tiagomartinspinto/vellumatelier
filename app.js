@@ -1,28 +1,40 @@
 const storageKey = "arted-phd-writer-state-v1";
 const defaultFolderId = "folder-unsorted";
+const defaultGithubBranch = "main";
+const defaultFontFamily = "Georgia";
+const defaultFontSize = 14;
+const defaultLineHeight = 1.75;
+const defaultZoom = 100;
+
+function createDocument(overrides = {}) {
+  return {
+    id: crypto.randomUUID(),
+    title: "Untitled academic draft",
+    style: "apa",
+    status: "Draft",
+    content: "",
+    references: [],
+    manualReferences: [],
+    folderId: defaultFolderId,
+    fontFamily: defaultFontFamily,
+    fontSize: defaultFontSize,
+    lineHeight: defaultLineHeight,
+    zoom: defaultZoom,
+    updatedAt: Date.now(),
+    ...overrides,
+  };
+}
 
 const starterDocuments = [
-  {
-    id: crypto.randomUUID(),
+  createDocument({
     title: "Thesis chapter draft",
-    style: "apa",
-    status: "Draft",
     content: `<h2>Introduction</h2><p>Art education can be understood as a site where visual culture, identity, and critical pedagogy meet. This chapter examines how reflective practice can support students in connecting personal meaning with broader social questions.</p><p>The central argument is that socially engaged art education requires more than skill development; it requires attention to voice, context, materiality, and the ethical conditions of participation.</p>`,
-  references: [],
-  folderId: defaultFolderId,
-  status: "Draft",
-  updatedAt: Date.now(),
-  },
-  {
-    id: crypto.randomUUID(),
+  }),
+  createDocument({
     title: "Article idea",
-    style: "apa",
-    status: "Draft",
     content: `<h2>Abstract</h2><p>This article explores how museum education can support dialogic learning through participatory art practices. It considers the relationship between interpretation, embodiment, and critical reflection.</p>`,
-    references: [],
-    folderId: defaultFolderId,
     updatedAt: Date.now() - 60000,
-  },
+  }),
 ];
 
 const referenceCorpus = [
@@ -181,21 +193,31 @@ let activeId = state.activeId || state.documents[0].id;
 let lastSelection = null;
 let visibleReferences = [];
 let liveCrosscheckReferences = [];
+let zoteroReferences = [];
 let liveSearchTimer = null;
 let highlightTimer = null;
 let githubSnapshotTimer = null;
 let lastLiveQuery = "";
+let lastGithubPushSignature = "";
+let contextCitationToken = null;
 const githubSyncEndpoint = "http://127.0.0.1:37110/api";
 
 const els = {
   documentList: document.querySelector("#documentList"),
   folderInlinePanel: document.querySelector("#folderInlinePanel"),
   folderNameInput: document.querySelector("#folderNameInput"),
+  pageCanvas: document.querySelector("#pageCanvas"),
   editor: document.querySelector("#editor"),
+  editorContextMenu: document.querySelector("#editorContextMenu"),
   docTitle: document.querySelector("#docTitle"),
   themeToggleButton: document.querySelector("#themeToggleButton"),
   projectMode: document.querySelector("#projectMode"),
   docStatus: document.querySelector("#docStatus"),
+  blockStyleSelect: document.querySelector("#blockStyleSelect"),
+  fontFamilySelect: document.querySelector("#fontFamilySelect"),
+  fontSizeSelect: document.querySelector("#fontSizeSelect"),
+  lineHeightSelect: document.querySelector("#lineHeightSelect"),
+  zoomLevelLabel: document.querySelector("#zoomLevelLabel"),
   wordCount: document.querySelector("#wordCount"),
   charCount: document.querySelector("#charCount"),
   citationCount: document.querySelector("#citationCount"),
@@ -206,6 +228,14 @@ const els = {
   sourceCheckList: document.querySelector("#sourceCheckList"),
   sourceCheckStatus: document.querySelector("#sourceCheckStatus"),
   readingList: document.querySelector("#readingList"),
+  selectionPreview: document.querySelector("#selectionPreview"),
+  selectionCitationList: document.querySelector("#selectionCitationList"),
+  zoteroLibraryType: document.querySelector("#zoteroLibraryType"),
+  zoteroLibraryId: document.querySelector("#zoteroLibraryId"),
+  zoteroApiKey: document.querySelector("#zoteroApiKey"),
+  zoteroSearchInput: document.querySelector("#zoteroSearchInput"),
+  zoteroStatus: document.querySelector("#zoteroStatus"),
+  zoteroResults: document.querySelector("#zoteroResults"),
   researchQuestionInput: document.querySelector("#researchQuestionInput"),
   subQuestionsInput: document.querySelector("#subQuestionsInput"),
   methodologyInput: document.querySelector("#methodologyInput"),
@@ -218,6 +248,8 @@ const els = {
   googleInlineMessage: document.querySelector("#googleInlineMessage"),
   githubInlinePanel: document.querySelector("#githubInlinePanel"),
   githubRepoInput: document.querySelector("#githubRepoInput"),
+  githubBranchInput: document.querySelector("#githubBranchInput"),
+  githubTokenInput: document.querySelector("#githubTokenInput"),
   githubSyncMessage: document.querySelector("#githubSyncMessage"),
   rewriteOutput: document.querySelector("#rewriteOutput"),
   googleDialog: document.querySelector("#googleDialog"),
@@ -258,9 +290,14 @@ function normalizeState(value) {
 
   const folderIds = new Set(folders.map((folder) => folder.id));
   const documents = value.documents.map((doc) => ({
-    ...doc,
+    ...createDocument(doc),
     folderId: folderIds.has(doc.folderId) ? doc.folderId : defaultFolderId,
     status: doc.status || "Draft",
+    manualReferences: Array.isArray(doc.manualReferences) ? doc.manualReferences : [],
+    fontFamily: doc.fontFamily || defaultFontFamily,
+    fontSize: Number(doc.fontSize) || defaultFontSize,
+    lineHeight: Number(doc.lineHeight) || defaultLineHeight,
+    zoom: clampZoom(Number(doc.zoom) || defaultZoom),
   }));
 
   return {
@@ -277,6 +314,16 @@ function normalizeState(value) {
     },
     theme: value.theme || "night",
     literatureMatrix: Array.isArray(value.literatureMatrix) ? value.literatureMatrix : [],
+    githubRepoUrl: value.githubRepoUrl || "",
+    githubBranch: value.githubBranch || defaultGithubBranch,
+    githubToken: value.githubToken || "",
+    zotero: {
+      libraryType: "users",
+      libraryId: "",
+      apiKey: "",
+      searchQuery: "",
+      ...(value.zotero || {}),
+    },
     activeId: documents.some((doc) => doc.id === value.activeId)
       ? value.activeId
       : documents[0]?.id,
@@ -503,13 +550,51 @@ function deleteLiteratureRow(rowId) {
   renderLiteratureMatrix();
 }
 
+function clampZoom(value) {
+  return Math.min(170, Math.max(70, Math.round(value || defaultZoom)));
+}
+
+function fontStack(value) {
+  const map = {
+    Georgia: 'Georgia, "Times New Roman", serif',
+    "Times New Roman": '"Times New Roman", Times, serif',
+    Inter: 'Inter, ui-sans-serif, system-ui, sans-serif',
+    Arial: 'Arial, Helvetica, sans-serif',
+    Garamond: 'Garamond, Baskerville, serif',
+  };
+  return map[value] || map[defaultFontFamily];
+}
+
+function applyDocumentAppearance(doc = activeDocument()) {
+  const zoom = clampZoom(doc.zoom);
+  const zoomScale = zoom / 100;
+  els.editor.style.setProperty("--doc-font-family", fontStack(doc.fontFamily));
+  els.editor.style.setProperty("--doc-font-size", `${Number(doc.fontSize) * zoomScale}px`);
+  els.editor.style.setProperty("--doc-line-height", String(doc.lineHeight || defaultLineHeight));
+  els.editor.style.setProperty("--doc-page-width", `${Math.round(880 * zoomScale)}px`);
+  els.editor.style.setProperty("--doc-page-padding", `${Math.round(56 * zoomScale)}px`);
+  if (els.zoomLevelLabel) {
+    els.zoomLevelLabel.textContent = `${zoom}%`;
+  }
+}
+
+function renderFormattingToolbar(doc = activeDocument()) {
+  if (els.fontFamilySelect) els.fontFamilySelect.value = doc.fontFamily || defaultFontFamily;
+  if (els.fontSizeSelect) els.fontSizeSelect.value = String(doc.fontSize || defaultFontSize);
+  if (els.lineHeightSelect) els.lineHeightSelect.value = String(doc.lineHeight || defaultLineHeight);
+}
+
 function renderEditor() {
   const doc = activeDocument();
   els.docTitle.value = doc.title;
   els.docStatus.value = doc.status || "Draft";
   els.projectMode.value = state.project?.mode || "thesis";
   els.editor.innerHTML = doc.content;
-  document.querySelectorAll(".style-button").forEach((button) => {
+  applyDocumentAppearance(doc);
+  renderFormattingToolbar(doc);
+  syncCitationTokens();
+  syncBibliographySection();
+  document.querySelectorAll(".citation-style-button").forEach((button) => {
     button.classList.toggle("active", button.dataset.style === doc.style);
   });
 }
@@ -518,8 +603,11 @@ function renderApp() {
   renderDocuments();
   renderEditor();
   renderGoogleDocState();
+  renderZoteroState();
+  renderZoteroResults();
   renderProjectPlan();
   updateMetrics();
+  renderSelectionCitations();
   scheduleFocusHighlights();
   renderReferences();
   renderSourceChecks();
@@ -530,7 +618,12 @@ function saveCurrentDocument() {
   const doc = activeDocument();
   doc.title = els.docTitle.value.trim() || "Untitled";
   doc.status = els.docStatus.value || "Draft";
+  syncReferencesFromDocument();
   doc.content = htmlWithoutFocusMarks();
+  doc.fontFamily = els.fontFamilySelect?.value || doc.fontFamily || defaultFontFamily;
+  doc.fontSize = Number(els.fontSizeSelect?.value) || doc.fontSize || defaultFontSize;
+  doc.lineHeight = Number(els.lineHeightSelect?.value) || doc.lineHeight || defaultLineHeight;
+  doc.zoom = clampZoom(doc.zoom);
   doc.updatedAt = Date.now();
   persist();
 }
@@ -557,9 +650,31 @@ function googleSyncMessage(doc = activeDocument()) {
 function renderGithubState() {
   if (!els.githubRepoInput || !els.githubSyncMessage) return;
   els.githubRepoInput.value = state.githubRepoUrl || "";
+  if (els.githubBranchInput) {
+    els.githubBranchInput.value = state.githubBranch || defaultGithubBranch;
+  }
+  if (els.githubTokenInput) {
+    els.githubTokenInput.value = state.githubToken || "";
+  }
   els.githubSyncMessage.textContent = state.githubRepoUrl
-    ? "GitHub linked. The app will ask the local helper to push every 110 seconds."
-    : "Pushes every 110 seconds when the local sync helper is running.";
+    ? state.githubToken
+      ? "GitHub linked. Browser sync is ready and can push or pull across devices."
+      : "GitHub linked. The optional local sync helper can push every 110 seconds."
+    : "Link a private repository. Add a token for browser sync across devices, or use the optional local sync helper.";
+}
+
+function renderZoteroState() {
+  if (!els.zoteroLibraryType) return;
+  const zotero = state.zotero || {};
+  els.zoteroLibraryType.value = zotero.libraryType || "users";
+  els.zoteroLibraryId.value = zotero.libraryId || "";
+  els.zoteroApiKey.value = zotero.apiKey || "";
+  els.zoteroSearchInput.value = zotero.searchQuery || "";
+  els.zoteroStatus.textContent = zotero.libraryId
+    ? zotero.apiKey
+      ? "Connected to a private Zotero library."
+      : "Connected to a public Zotero library."
+    : "Connect a public library with its user or group ID, or add an API key for a private library.";
 }
 
 function renderTheme() {
@@ -578,14 +693,20 @@ function toggleTheme() {
 
 async function saveGithubRepo() {
   const repoUrl = els.githubRepoInput.value.trim();
+  const branch = els.githubBranchInput?.value.trim() || defaultGithubBranch;
+  const token = els.githubTokenInput?.value.trim() || "";
   if (!repoUrl) {
     state.githubRepoUrl = "";
+    state.githubBranch = defaultGithubBranch;
+    state.githubToken = "";
     persist();
     renderGithubState();
     return;
   }
 
   state.githubRepoUrl = repoUrl;
+  state.githubBranch = branch;
+  state.githubToken = token;
   persist();
   renderGithubState();
   await sendGithubConfig();
@@ -606,11 +727,13 @@ function githubPayload(reason = "auto") {
   return {
     reason,
     repoUrl: state.githubRepoUrl,
+    branch: state.githubBranch || defaultGithubBranch,
     activeId,
     folders: state.folders,
     project: state.project,
     literatureMatrix: state.literatureMatrix,
     theme: state.theme,
+    zotero: state.zotero,
     documents: state.documents.map((doc) => ({
       ...doc,
       plainText: stripHtml(doc.content),
@@ -619,13 +742,88 @@ function githubPayload(reason = "auto") {
   };
 }
 
+function githubSnapshotSignature(payload) {
+  return JSON.stringify({
+    activeId: payload.activeId,
+    theme: payload.theme,
+    folders: payload.folders,
+    project: payload.project,
+    literatureMatrix: payload.literatureMatrix,
+    documents: payload.documents.map((doc) => ({
+      id: doc.id,
+      title: doc.title,
+      style: doc.style,
+      status: doc.status,
+      content: doc.content,
+      references: doc.references,
+      manualReferences: doc.manualReferences,
+      folderId: doc.folderId,
+      fontFamily: doc.fontFamily,
+      fontSize: doc.fontSize,
+      lineHeight: doc.lineHeight,
+      zoom: doc.zoom,
+    })),
+  });
+}
+
+function parseGithubRepo(value) {
+  const text = String(value || "").trim();
+  const httpsMatch = text.match(/^https:\/\/github\.com\/([^/]+)\/([^/]+?)(?:\.git)?$/i);
+  if (httpsMatch) {
+    return { owner: httpsMatch[1], repo: httpsMatch[2] };
+  }
+  const sshMatch = text.match(/^git@github\.com:([^/]+)\/([^/]+?)(?:\.git)?$/i);
+  if (sshMatch) {
+    return { owner: sshMatch[1], repo: sshMatch[2] };
+  }
+  return null;
+}
+
+function encodeBase64(text) {
+  const bytes = new TextEncoder().encode(text);
+  let binary = "";
+  bytes.forEach((byte) => {
+    binary += String.fromCharCode(byte);
+  });
+  return btoa(binary);
+}
+
+function decodeBase64(text) {
+  const binary = atob(text);
+  const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
+  return new TextDecoder().decode(bytes);
+}
+
+function githubFilePath() {
+  return "github-export/project-state.json";
+}
+
+function githubApiHeaders() {
+  return {
+    Accept: "application/vnd.github+json",
+    Authorization: `Bearer ${state.githubToken}`,
+    "X-GitHub-Api-Version": "2022-11-28",
+  };
+}
+
+function githubApiUrl(pathName) {
+  const repo = parseGithubRepo(state.githubRepoUrl);
+  if (!repo) return "";
+  const safePath = String(pathName).split("/").map(encodeURIComponent).join("/");
+  return `https://api.github.com/repos/${repo.owner}/${repo.repo}/contents/${safePath}`;
+}
+
 async function sendGithubConfig() {
   if (!state.githubRepoUrl) return;
+  if (state.githubToken) return;
   try {
     const response = await fetch(`${githubSyncEndpoint}/config`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ repoUrl: state.githubRepoUrl }),
+      body: JSON.stringify({
+        repoUrl: state.githubRepoUrl,
+        branch: state.githubBranch || defaultGithubBranch,
+      }),
     });
     const result = await response.json();
     els.githubSyncMessage.textContent = result.message || "GitHub repository linked.";
@@ -637,34 +835,57 @@ async function sendGithubConfig() {
 
 async function sendGithubSnapshot(reason = "auto") {
   if (!state.githubRepoUrl) return;
+  const payload = githubPayload(reason);
+  const signature = githubSnapshotSignature(payload);
+  if (reason === "auto" && signature === lastGithubPushSignature) return;
+
   try {
+    if (state.githubToken) {
+      els.githubSyncMessage.textContent = "Pushing project snapshot to GitHub...";
+      const message = await sendGithubSnapshotViaApi(payload);
+      lastGithubPushSignature = signature;
+      els.githubSyncMessage.textContent = message;
+      return;
+    }
+
     els.githubSyncMessage.textContent = "Sending snapshot to GitHub helper...";
     const response = await fetch(`${githubSyncEndpoint}/snapshot`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(githubPayload(reason)),
+      body: JSON.stringify(payload),
     });
     const result = await response.json();
+    lastGithubPushSignature = signature;
     els.githubSyncMessage.textContent =
       result.message ||
       `Snapshot handled at ${new Date().toLocaleTimeString([], {
         hour: "2-digit",
         minute: "2-digit",
       })}.`;
-  } catch {
-    els.githubSyncMessage.textContent =
-      "Could not reach GitHub helper. Start it with: node sync-server.js";
+  } catch (error) {
+    els.githubSyncMessage.textContent = githubSyncFailureMessage(error);
   }
 }
 
 async function pullGithubSnapshot() {
   if (!state.githubRepoUrl) return;
   try {
+    if (state.githubToken) {
+      els.githubSyncMessage.textContent = "Pulling latest GitHub snapshot...";
+      const snapshot = await pullGithubSnapshotViaApi();
+      applyGithubSnapshot(snapshot);
+      els.githubSyncMessage.textContent = "Pulled latest GitHub snapshot.";
+      return;
+    }
+
     els.githubSyncMessage.textContent = "Pulling latest GitHub snapshot...";
     const response = await fetch(`${githubSyncEndpoint}/pull`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ repoUrl: state.githubRepoUrl }),
+      body: JSON.stringify({
+        repoUrl: state.githubRepoUrl,
+        branch: state.githubBranch || defaultGithubBranch,
+      }),
     });
     const result = await response.json();
     if (!result.ok) throw new Error(result.message || "Pull failed");
@@ -672,25 +893,100 @@ async function pullGithubSnapshot() {
       applyGithubSnapshot(result.snapshot);
     }
     els.githubSyncMessage.textContent = result.message || "Pulled latest GitHub snapshot.";
-  } catch {
-    els.githubSyncMessage.textContent =
-      "Could not pull from GitHub. Start the helper and check repository access.";
+  } catch (error) {
+    els.githubSyncMessage.textContent = githubSyncFailureMessage(error);
   }
+}
+
+async function sendGithubSnapshotViaApi(payload) {
+  const repo = parseGithubRepo(state.githubRepoUrl);
+  if (!repo) throw new Error("Use a valid GitHub repository URL.");
+
+  const pathName = githubFilePath();
+  const url = `${githubApiUrl(pathName)}?ref=${encodeURIComponent(state.githubBranch || defaultGithubBranch)}`;
+  let sha = "";
+
+  const existingResponse = await fetch(url, {
+    headers: githubApiHeaders(),
+  });
+  if (existingResponse.ok) {
+    const existing = await existingResponse.json();
+    sha = existing.sha || "";
+  } else if (existingResponse.status !== 404) {
+    const errorPayload = await existingResponse.json().catch(() => ({}));
+    throw new Error(errorPayload.message || "GitHub could not read the current project snapshot.");
+  }
+
+  const timestamp = new Date().toISOString().replace("T", " ").slice(0, 19);
+  const body = {
+    message: `Sync Vellum Atelier project (${payload.reason}, ${timestamp})`,
+    content: encodeBase64(JSON.stringify(payload, null, 2)),
+    branch: state.githubBranch || defaultGithubBranch,
+    committer: {
+      name: "Vellum Atelier",
+      email: "phd-writer@example.local",
+    },
+  };
+  if (sha) body.sha = sha;
+
+  const response = await fetch(githubApiUrl(pathName), {
+    method: "PUT",
+    headers: {
+      ...githubApiHeaders(),
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(result.message || "GitHub rejected the snapshot write.");
+  }
+  return "Pushed project snapshot to GitHub.";
+}
+
+async function pullGithubSnapshotViaApi() {
+  const response = await fetch(
+    `${githubApiUrl(githubFilePath())}?ref=${encodeURIComponent(state.githubBranch || defaultGithubBranch)}`,
+    {
+      headers: githubApiHeaders(),
+    },
+  );
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(result.message || "GitHub could not load the project snapshot.");
+  }
+  if (!result.content) {
+    throw new Error("The repository does not have a saved project snapshot yet.");
+  }
+  return JSON.parse(decodeBase64(String(result.content).replace(/\n/g, "")));
+}
+
+function githubSyncFailureMessage(error) {
+  const message = String(error?.message || error || "").trim();
+  if (message.includes("Bad credentials")) {
+    return "GitHub rejected the token. Use a fine-grained token with Contents access to this repository.";
+  }
+  if (message.includes("Resource not accessible by personal access token")) {
+    return "That GitHub token cannot write to this repository. Check its repository access and Contents permission.";
+  }
+  if (message.includes("Could not reach")) {
+    return message;
+  }
+  return message || "GitHub sync failed.";
 }
 
 function applyGithubSnapshot(snapshot) {
   if (!snapshot.documents?.length) return;
   state.folders = snapshot.folders || state.folders;
-  state.documents = snapshot.documents.map((doc) => ({
-    ...doc,
-    status: doc.status || "Draft",
-  }));
+  state.documents = snapshot.documents.map((doc) => createDocument(doc));
   state.project = snapshot.project || state.project;
   state.literatureMatrix = snapshot.literatureMatrix || state.literatureMatrix;
   state.theme = snapshot.theme || state.theme;
+  state.zotero = snapshot.zotero || state.zotero;
   activeId = snapshot.activeId && state.documents.some((doc) => doc.id === snapshot.activeId)
     ? snapshot.activeId
     : state.documents[0].id;
+  lastGithubPushSignature = githubSnapshotSignature(snapshot);
   persist();
   renderApp();
   renderTheme();
@@ -713,7 +1009,9 @@ function countWords(text) {
 function updateMetrics() {
   const text = textFromEditor();
   const words = countWords(text);
-  const citations = text.match(/\([A-Z][A-Za-z-]+(?: et al\.)?, \d{4}\)/g) || [];
+  const citations = els.editor.querySelectorAll(".citation-token").length
+    ? Array.from(els.editor.querySelectorAll(".citation-token"))
+    : text.match(/\([A-Z][A-Za-z-]+(?: et al\.)?, \d{4}\)/g) || [];
   const topic = detectTopic(text);
 
   els.wordCount.textContent = String(words);
@@ -838,7 +1136,6 @@ function applyFocusHighlights() {
   }
 
   restoreCaretOffset(caretOffset);
-  saveCurrentDocument();
 }
 
 function htmlWithoutFocusMarks() {
@@ -862,6 +1159,9 @@ function highlightTerms(terms) {
     acceptNode(node) {
       if (!node.nodeValue.trim()) return NodeFilter.FILTER_REJECT;
       if (node.parentElement?.closest("mark.topic-trigger")) return NodeFilter.FILTER_REJECT;
+      if (node.parentElement?.closest(".citation-token,[data-bibliography-section='true']")) {
+        return NodeFilter.FILTER_REJECT;
+      }
       pattern.lastIndex = 0;
       return pattern.test(node.nodeValue) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
     },
@@ -963,6 +1263,7 @@ function allKnownReferences() {
     ...Object.values(state.customReferences || {}),
     ...visibleReferences,
     ...liveCrosscheckReferences,
+    ...zoteroReferences,
   ];
   return Array.from(new Map(refs.map((ref) => [ref.id, ref])).values());
 }
@@ -982,7 +1283,7 @@ function renderReferences(list = suggestedReferences()) {
     card.innerHTML = `
       <p class="reference-meta">${escapeHtml(ref.source)} · ${ref.year}</p>
       <h3>${escapeHtml(ref.title)}</h3>
-      <p>${escapeHtml(ref.authors.join(", "))}</p>
+      <p>${escapeHtml(referenceAuthors(ref).join(", "))}</p>
       <p>${escapeHtml(ref.abstract || "Metadata result from an academic source.")}</p>
       <div class="reference-actions">
         <button type="button" data-cite="${escapeHtml(ref.id)}">Cite</button>
@@ -994,18 +1295,102 @@ function renderReferences(list = suggestedReferences()) {
   });
 }
 
+function referenceAuthors(ref) {
+  if (Array.isArray(ref.authors) && ref.authors.length) return ref.authors;
+  if (Array.isArray(ref.creators) && ref.creators.length) {
+    return ref.creators
+      .map((creator) => {
+        if (creator.name) return creator.name;
+        return [creator.firstName, creator.lastName].filter(Boolean).join(" ").trim();
+      })
+      .filter(Boolean);
+  }
+  return ["Unknown"];
+}
+
+function surnameFromAuthor(author) {
+  const text = String(author || "").trim();
+  if (!text) return "Unknown";
+  if (text.includes(",")) return text.split(",")[0].trim();
+  return text.split(/\s+/).at(-1) || text;
+}
+
+function initialsFromAuthor(author) {
+  const text = String(author || "").trim();
+  const [firstPart, secondPart] = text.includes(",")
+    ? text.split(",").map((part) => part.trim())
+    : [surnameFromAuthor(text), text.split(/\s+/).slice(0, -1).join(" ")];
+  const initials = String(secondPart || "")
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((part) => `${part.charAt(0).toUpperCase()}.`)
+    .join(" ");
+  return initials ? `${firstPart}, ${initials}` : firstPart;
+}
+
+function referenceYear(ref) {
+  return String(ref.year || ref.date || "n.d.");
+}
+
+function citationText(ref, style = activeDocument().style) {
+  if (ref.formattedCitationByStyle?.[style]) {
+    return stripTags(ref.formattedCitationByStyle[style]).trim();
+  }
+  const authorList = referenceAuthors(ref);
+  const first = surnameFromAuthor(authorList[0]);
+  const year = referenceYear(ref);
+  const authorLabel = authorList.length > 2 ? `${first} et al.` : first;
+  if (style === "harvard") return `(${authorLabel} ${year})`;
+  return `(${authorLabel}, ${year})`;
+}
+
+function referenceLink(ref) {
+  return ref.doi
+    ? `https://doi.org/${String(ref.doi).replace(/^https?:\/\/doi\.org\//i, "")}`
+    : ref.url || "";
+}
+
+function bibliographyText(ref, style = activeDocument().style) {
+  if (ref.formattedByStyle?.[style]) {
+    return ref.formattedByStyle[style];
+  }
+
+  const authors = referenceAuthors(ref);
+  const year = referenceYear(ref);
+  const title = escapeHtml(ref.title || "Untitled");
+  const journal = escapeHtml(ref.journal || ref.publicationTitle || ref.source || "");
+  const volumeIssue = [ref.volume, ref.issue ? `(${ref.issue})` : ""].filter(Boolean).join("");
+  const pages = ref.pages ? `, ${escapeHtml(ref.pages)}` : "";
+  const link = referenceLink(ref);
+  const suffix = link ? ` ${escapeHtml(link)}.` : journal ? "." : "";
+
+  if (ref.itemType === "journalArticle" || journal) {
+    const authorText = style === "harvard"
+      ? authors.map(initialsFromAuthor).join(" and ")
+      : authors.map(initialsFromAuthor).join(", ");
+    if (style === "harvard") {
+      return `${authorText} ${year}, "${title}," <em>${journal}</em>${volumeIssue ? `, ${escapeHtml(volumeIssue)}` : ""}${pages}${suffix}`;
+    }
+    return `${authorText} (${year}). ${title}. <em>${journal}</em>${volumeIssue ? `, ${escapeHtml(volumeIssue)}` : ""}${pages}${suffix}`;
+  }
+
+  const authorText = style === "harvard"
+    ? authors.map(initialsFromAuthor).join(" and ")
+    : authors.map(initialsFromAuthor).join(", ");
+  const publisher = escapeHtml(ref.publisher || ref.source || "");
+
+  if (style === "harvard") {
+    return `${authorText} ${year}, <em>${title}</em>${publisher ? `. ${publisher}` : ""}${suffix}`;
+  }
+  return `${authorText}. (${year}). <em>${title}</em>${publisher ? `. ${publisher}` : ""}${suffix}`;
+}
+
 function formatCitation(ref, style = activeDocument().style) {
-  const firstAuthor = ref.authors[0]?.split(" ").slice(-1)[0] || "Unknown";
-  if (style === "harvard") return `(${firstAuthor} ${ref.year})`;
-  return `(${firstAuthor}, ${ref.year})`;
+  return citationText(ref, style);
 }
 
 function formatBibliography(ref, style = activeDocument().style) {
-  const authorText = ref.authors.join(", ");
-  if (style === "harvard") {
-    return `${authorText} ${ref.year}, <em>${escapeHtml(ref.title)}</em>. ${escapeHtml(ref.source)}.`;
-  }
-  return `${authorText}. (${ref.year}). <em>${escapeHtml(ref.title)}</em>. ${escapeHtml(ref.source)}.`;
+  return bibliographyText(ref, style);
 }
 
 function insertAtCaret(html) {
@@ -1022,24 +1407,93 @@ function insertAtCaret(html) {
   selection.collapseToEnd();
 }
 
-function addBibliography(ref) {
-  const doc = activeDocument();
-  state.customReferences[ref.id] = ref;
-  doc.references = Array.from(new Set([...(doc.references || []), ref.id]));
-  const bibliographyItems = doc.references
-    .map((id) => lookupReference(id))
-    .filter(Boolean)
-    .map((item) => `<p>${formatBibliography(item, doc.style)}</p>`)
-    .join("");
+function restoreSavedSelection() {
+  if (!lastSelection) return;
+  const selection = window.getSelection();
+  selection.removeAllRanges();
+  selection.addRange(lastSelection);
+}
 
-  let html = els.editor.innerHTML;
-  const block = `<h2>References</h2>${bibliographyItems}`;
-  if (html.includes("<h2>References</h2>")) {
-    html = html.replace(/<h2>References<\/h2>[\s\S]*$/i, block);
-  } else {
-    html += block;
+function citationTokenMarkup(ref) {
+  return `<span class="citation-token" contenteditable="false" data-ref-id="${escapeAttribute(ref.id)}">${escapeHtml(formatCitation(ref))}</span>`;
+}
+
+function syncReferencesFromDocument() {
+  const doc = activeDocument();
+  const tokenRefs = Array.from(
+    new Set(
+      Array.from(els.editor.querySelectorAll(".citation-token"))
+        .map((token) => token.dataset.refId)
+        .filter(Boolean),
+    ),
+  );
+  doc.references = Array.from(new Set([...tokenRefs, ...(doc.manualReferences || [])]));
+}
+
+function syncCitationTokens() {
+  els.editor.querySelectorAll(".citation-token").forEach((token) => {
+    const ref = lookupReference(token.dataset.refId);
+    if (!ref) return;
+    token.textContent = formatCitation(ref);
+  });
+}
+
+function syncBibliographySection() {
+  const caretOffset = getCaretOffset();
+  syncReferencesFromDocument();
+  const doc = activeDocument();
+  els.editor.querySelectorAll("[data-bibliography-break='true'], [data-bibliography-section='true']").forEach((node) => node.remove());
+
+  if (!doc.references?.length) {
+    restoreCaretOffset(caretOffset);
+    return;
   }
-  els.editor.innerHTML = html;
+
+  const breakEl = document.createElement("div");
+  breakEl.className = "page-break";
+  breakEl.dataset.bibliographyBreak = "true";
+  breakEl.contentEditable = "false";
+  breakEl.textContent = "Bibliography";
+
+  const section = document.createElement("section");
+  section.className = "bibliography-page";
+  section.dataset.bibliographySection = "true";
+  section.contentEditable = "false";
+  section.innerHTML = `
+    <h2>${doc.style === "harvard" ? "References" : "References"}</h2>
+    <div class="bibliography-list">
+      ${doc.references
+        .map((id) => lookupReference(id))
+        .filter(Boolean)
+        .map((item) => `<p class="bibliography-entry">${formatBibliography(item, doc.style)}</p>`)
+        .join("")}
+    </div>
+  `;
+
+  els.editor.append(breakEl, section);
+  restoreCaretOffset(caretOffset);
+}
+
+function insertCitationForReference(ref) {
+  if (!ref) return;
+  state.customReferences[ref.id] = ref;
+  restoreSavedSelection();
+  insertAtCaret(`${citationTokenMarkup(ref)} `);
+  syncCitationTokens();
+  syncBibliographySection();
+  saveCurrentDocument();
+  updateMetrics();
+  renderSelectionCitations();
+  renderSourceChecks();
+}
+
+function addBibliography(ref) {
+  if (!ref) return;
+  state.customReferences[ref.id] = ref;
+  const doc = activeDocument();
+  doc.manualReferences = Array.from(new Set([...(doc.manualReferences || []), ref.id]));
+  doc.references = Array.from(new Set([...(doc.references || []), ref.id]));
+  syncBibliographySection();
   saveCurrentDocument();
   updateMetrics();
 }
@@ -1049,8 +1503,42 @@ function lookupReference(id) {
     referenceCorpus.find((item) => item.id === id) ||
     visibleReferences.find((item) => item.id === id) ||
     liveCrosscheckReferences.find((item) => item.id === id) ||
+    zoteroReferences.find((item) => item.id === id) ||
     state.customReferences[id]
   );
+}
+
+function bestReferencesForSelection(text) {
+  if (!text || countWords(text) < 2) return [];
+  return sourceMatchesForText(text).slice(0, 4).map((item) => item.ref);
+}
+
+function renderSelectionCitations(text = getSelectedText()) {
+  if (!els.selectionPreview || !els.selectionCitationList) return;
+  if (!text) {
+    els.selectionPreview.textContent =
+      "Select a sentence or phrase in the editor. Right-click to cite it, or use the suggestions here.";
+    els.selectionCitationList.innerHTML = "";
+    return;
+  }
+
+  els.selectionPreview.textContent = text;
+  const refs = bestReferencesForSelection(text);
+  if (!refs.length) {
+    els.selectionCitationList.innerHTML =
+      '<button class="ghost-button" type="button" data-search-selection="true">Search sources for this selection</button>';
+    return;
+  }
+
+  els.selectionCitationList.innerHTML = refs
+    .map(
+      (ref) => `
+        <button class="ghost-button" type="button" data-selection-cite="${escapeHtml(ref.id)}">
+          Cite ${escapeHtml(ref.title)} ${escapeHtml(formatCitation(ref))}
+        </button>
+      `,
+    )
+    .join("");
 }
 
 function renderSourceChecks() {
@@ -1088,7 +1576,7 @@ function renderSourceChecks() {
       <article class="check-card${warningClass}">
         <span class="match-score">${Math.round(score * 100)}% conceptual overlap</span>
         <h3>${escapeHtml(risk)}</h3>
-        <p>${escapeHtml(ref.title)} by ${escapeHtml(ref.authors.join(", "))} may be relevant. If this source shaped the idea, cite it; if wording is close, paraphrase more clearly and cite it.</p>
+        <p>${escapeHtml(ref.title)} by ${escapeHtml(referenceAuthors(ref).join(", "))} may be relevant. If this source shaped the idea, cite it; if wording is close, paraphrase more clearly and cite it.</p>
         <div class="reference-actions">
           <button type="button" data-source-cite="${escapeHtml(ref.id)}">Insert ${escapeHtml(formatCitation(ref))}</button>
           <button type="button" data-source-add="${escapeHtml(ref.id)}">Add bibliography</button>
@@ -1133,7 +1621,7 @@ function renderReadingSuggestions(priorityRefs = []) {
         <article class="reading-card">
           <p class="reference-meta">${escapeHtml(ref.source)} · ${escapeHtml(ref.year)}</p>
           <h3>${escapeHtml(ref.title)}</h3>
-          <p>${escapeHtml(ref.authors?.join(", ") || "Unknown author")}</p>
+          <p>${escapeHtml(referenceAuthors(ref).join(", "))}</p>
           <span class="preview-text">${escapeHtml(referencePreview(ref))}</span>
           <div class="reference-actions">
             <button type="button" data-source-cite="${escapeHtml(ref.id)}">Cite ${escapeHtml(formatCitation(ref))}</button>
@@ -1352,6 +1840,176 @@ function lowercaseFirst(text) {
   return text.charAt(0).toLowerCase() + text.slice(1);
 }
 
+function saveZoteroSettings() {
+  state.zotero = {
+    libraryType: els.zoteroLibraryType.value,
+    libraryId: els.zoteroLibraryId.value.trim(),
+    apiKey: els.zoteroApiKey.value.trim(),
+    searchQuery: els.zoteroSearchInput.value.trim(),
+  };
+  persist();
+  renderZoteroState();
+}
+
+function zoteroStyleId(style = activeDocument().style) {
+  return style === "harvard" ? "harvard-cite-them-right" : "apa";
+}
+
+function zoteroLibraryPrefix() {
+  const zotero = state.zotero || {};
+  if (!zotero.libraryId) return "";
+  return `https://api.zotero.org/${zotero.libraryType || "users"}/${encodeURIComponent(zotero.libraryId)}`;
+}
+
+function zoteroHeaders() {
+  const headers = {
+    "Zotero-API-Version": "3",
+  };
+  if (state.zotero?.apiKey) {
+    headers["Zotero-API-Key"] = state.zotero.apiKey;
+  }
+  return headers;
+}
+
+function yearFromDate(value) {
+  const match = String(value || "").match(/\b(19|20)\d{2}\b/);
+  return match ? match[0] : String(value || "n.d.").slice(0, 4) || "n.d.";
+}
+
+function stripTags(value) {
+  const div = document.createElement("div");
+  div.innerHTML = String(value || "");
+  return div.textContent || "";
+}
+
+function cleanZoteroMarkup(value) {
+  return String(value || "")
+    .replace(/^<div class="csl-entry">/i, "")
+    .replace(/<\/div>$/i, "")
+    .trim();
+}
+
+function normalizeZoteroItem(item) {
+  const data = item.data || item;
+  const style = activeDocument().style;
+  const creators = Array.isArray(data.creators) ? data.creators : [];
+  const authors = creators
+    .filter((creator) => creator.creatorType !== "editor")
+    .map((creator) => {
+      if (creator.name) return creator.name;
+      return [creator.firstName, creator.lastName].filter(Boolean).join(" ").trim();
+    })
+    .filter(Boolean);
+
+  return {
+    id: `zotero-${item.key || data.key || crypto.randomUUID()}`,
+    zoteroKey: item.key || data.key || "",
+    title: data.title || "Untitled item",
+    authors,
+    creators,
+    year: yearFromDate(data.date),
+    date: data.date || "",
+    source: data.publicationTitle || data.publisher || data.bookTitle || "Zotero",
+    journal: data.publicationTitle || "",
+    volume: data.volume || "",
+    issue: data.issue || "",
+    pages: data.pages || "",
+    publisher: data.publisher || "",
+    itemType: data.itemType || "",
+    doi: data.DOI || data.doi || "",
+    url: data.url || "",
+    abstract: data.abstractNote || "",
+    preview: data.abstractNote || "",
+    topics: Array.isArray(data.tags)
+      ? data.tags.map((tag) => tag.tag).filter(Boolean)
+      : [],
+    formattedByStyle: {
+      [style]: cleanZoteroMarkup(item.bib),
+    },
+    formattedCitationByStyle: {
+      [style]: stripTags(item.citation),
+    },
+  };
+}
+
+function renderZoteroResults(results = zoteroReferences) {
+  if (!els.zoteroResults) return;
+  if (!results.length) {
+    els.zoteroResults.innerHTML =
+      '<article class="reference-card zotero-card"><h3>No Zotero results yet</h3><p>Search your library to pull in references you already trust.</p></article>';
+    return;
+  }
+
+  els.zoteroResults.innerHTML = results
+    .map(
+      (ref) => `
+        <article class="reference-card zotero-card">
+          <p class="reference-meta">${escapeHtml(ref.source)} · ${escapeHtml(referenceYear(ref))}</p>
+          <h3>${escapeHtml(ref.title)}</h3>
+          <p>${escapeHtml(referenceAuthors(ref).join(", "))}</p>
+          <p>${escapeHtml(ref.abstract || "Imported from your Zotero library.")}</p>
+          <div class="reference-actions">
+            <button type="button" data-zotero-cite="${escapeHtml(ref.id)}">Cite</button>
+            <button type="button" data-zotero-add="${escapeHtml(ref.id)}">Add bibliography</button>
+            ${ref.url ? `<a href="${escapeAttribute(ref.url)}" target="_blank" rel="noreferrer">Open</a>` : ""}
+          </div>
+        </article>
+      `,
+    )
+    .join("");
+}
+
+async function searchZotero(query = els.zoteroSearchInput.value.trim() || getSelectedText() || currentParagraphText()) {
+  saveZoteroSettings();
+  if (!state.zotero?.libraryId) {
+    els.zoteroStatus.textContent = "Add a Zotero user or group library ID first.";
+    return;
+  }
+  if (!query) {
+    els.zoteroStatus.textContent = "Enter a Zotero search query or select text in the editor first.";
+    return;
+  }
+
+  els.zoteroStatus.textContent = "Searching Zotero...";
+  state.zotero.searchQuery = query;
+  persist();
+
+  const params = new URLSearchParams({
+    q: query,
+    qmode: "everything",
+    limit: "8",
+    format: "json",
+    include: "data,bib,citation",
+    style: zoteroStyleId(),
+  });
+
+  try {
+    const response = await fetch(`${zoteroLibraryPrefix()}/items?${params.toString()}`, {
+      headers: zoteroHeaders(),
+    });
+    if (!response.ok) {
+      const detail = await response.text();
+      throw new Error(detail || "Zotero search failed");
+    }
+    const data = await response.json();
+    zoteroReferences = (data || []).map(normalizeZoteroItem);
+    zoteroReferences.forEach((ref) => {
+      state.customReferences[ref.id] = ref;
+    });
+    persist();
+    els.zoteroStatus.textContent = `Found ${zoteroReferences.length} Zotero item${zoteroReferences.length === 1 ? "" : "s"}.`;
+    renderZoteroResults(zoteroReferences);
+    renderSelectionCitations();
+  } catch (error) {
+    els.zoteroStatus.textContent =
+      error.message.includes("403") || error.message.includes("Forbidden")
+        ? "Zotero blocked the request. Add an API key if this library is private."
+        : "Zotero search failed. Check the library ID, API key, or network connection.";
+    zoteroReferences = [];
+    renderZoteroResults([]);
+  }
+}
+
 async function onlineSearch() {
   const query = document.querySelector("#referenceSearch").value.trim() || detectTopic(textFromEditor());
   if (!query) return;
@@ -1374,12 +2032,15 @@ async function onlineSearch() {
         .slice(0, 4),
       year: work.publication_year || "n.d.",
       source: work.primary_location?.source?.display_name || "OpenAlex",
+      journal: work.primary_location?.source?.display_name || "",
+      doi: work.doi || "",
+      url: work.doi || work.id || "https://openalex.org",
+      itemType: "journalArticle",
       topics: [query],
       abstract: abstractFromOpenAlex(work) || (work.cited_by_count
         ? `Cited by ${work.cited_by_count} works.`
         : "Academic metadata result."),
       preview: abstractFromOpenAlex(work) || previewFromWork(work),
-      url: work.doi || work.id || "https://openalex.org",
     }));
     renderReferences(results.length ? results : suggestedReferences());
   } catch {
@@ -1417,12 +2078,15 @@ async function liveAcademicSearch() {
         .slice(0, 4),
       year: work.publication_year || "n.d.",
       source: work.primary_location?.source?.display_name || "OpenAlex live check",
+      journal: work.primary_location?.source?.display_name || "",
+      doi: work.doi || "",
+      url: work.doi || work.id || "https://openalex.org",
+      itemType: "journalArticle",
       topics: [query, detectTopic(paragraph)].filter(Boolean),
       abstract: abstractFromOpenAlex(work) || (work.cited_by_count
         ? `Live academic metadata match. Cited by ${work.cited_by_count} works.`
         : "Live academic metadata match."),
       preview: abstractFromOpenAlex(work) || previewFromWork(work),
-      url: work.doi || work.id || "https://openalex.org",
     }));
     liveCrosscheckReferences.forEach((ref) => {
       state.customReferences[ref.id] = ref;
@@ -1685,17 +2349,103 @@ function escapeAttribute(value) {
   return escapeHtml(value).replaceAll("'", "&#39;");
 }
 
+function activateTab(tabName) {
+  document.querySelectorAll(".tab").forEach((item) => item.classList.remove("active"));
+  document.querySelectorAll(".panel").forEach((panel) => panel.classList.remove("active-panel"));
+  document.querySelector(`.tab[data-tab="${tabName}"]`)?.classList.add("active");
+  document.querySelector(`#${tabName}Panel`)?.classList.add("active-panel");
+}
+
+function removeCitationToken(token) {
+  token?.remove();
+  syncBibliographySection();
+  saveCurrentDocument();
+  updateMetrics();
+  renderSelectionCitations();
+  renderSourceChecks();
+}
+
+function hideEditorContextMenu() {
+  if (els.editorContextMenu) {
+    els.editorContextMenu.hidden = true;
+    els.editorContextMenu.innerHTML = "";
+  }
+  contextCitationToken = null;
+}
+
+function showEditorContextMenu(x, y, eventTarget) {
+  if (!els.editorContextMenu) return;
+
+  const selectedText = getSelectedText();
+  const citationTarget = eventTarget?.closest?.(".citation-token");
+  contextCitationToken = citationTarget || null;
+  const refs = selectedText ? bestReferencesForSelection(selectedText) : [];
+  const parts = [];
+
+  if (selectedText) {
+    parts.push(`<div class="context-menu-title">${escapeHtml(selectedText.slice(0, 72))}</div>`);
+    refs.forEach((ref) => {
+      parts.push(
+        `<button type="button" data-context-cite="${escapeHtml(ref.id)}">Cite ${escapeHtml(ref.title)} ${escapeHtml(formatCitation(ref))}</button>`,
+      );
+    });
+    parts.push('<button type="button" data-context-search="true">Search sources for this text</button>');
+    if (state.zotero?.libraryId) {
+      parts.push('<button type="button" data-context-zotero="true">Search Zotero for this text</button>');
+    }
+  } else if (citationTarget?.dataset.refId) {
+    const ref = lookupReference(citationTarget.dataset.refId);
+    parts.push(`<div class="context-menu-title">${escapeHtml(ref?.title || "Citation")}</div>`);
+    parts.push('<button type="button" data-context-remove="true">Remove citation</button>');
+  }
+
+  if (!parts.length) return;
+
+  els.editorContextMenu.innerHTML = parts.join("");
+  els.editorContextMenu.hidden = false;
+  const menuWidth = Math.min(320, window.innerWidth - 24);
+  const left = Math.min(x, window.innerWidth - menuWidth - 12);
+  const top = Math.min(y, window.innerHeight - 220);
+  els.editorContextMenu.style.left = `${Math.max(12, left)}px`;
+  els.editorContextMenu.style.top = `${Math.max(12, top)}px`;
+}
+
+function applyFormattingSelection(command, value = null) {
+  els.editor.focus();
+  restoreSavedSelection();
+  const execValue = command === "formatBlock" && value ? `<${String(value).toLowerCase()}>` : value;
+  document.execCommand(command, false, execValue);
+  saveCurrentDocument();
+  updateMetrics();
+}
+
+function updateDocumentFormatting(partial) {
+  Object.assign(activeDocument(), partial);
+  applyDocumentAppearance();
+  saveCurrentDocument();
+  renderDocuments();
+}
+
+function adjustZoom(delta) {
+  const doc = activeDocument();
+  doc.zoom = clampZoom((doc.zoom || defaultZoom) + delta);
+  applyDocumentAppearance(doc);
+  saveCurrentDocument();
+}
+
+function quickInsertCitation() {
+  const selectedText = getSelectedText();
+  const ref = bestReferencesForSelection(selectedText)[0] || suggestedReferences()[0];
+  if (!ref) {
+    activateTab("sources");
+    return;
+  }
+  insertCitationForReference(ref);
+}
+
 document.querySelector("#newDocumentButton").addEventListener("click", () => {
   saveCurrentDocument();
-  const doc = {
-    id: crypto.randomUUID(),
-    title: "Untitled academic draft",
-    style: "apa",
-    content: "",
-    references: [],
-    folderId: defaultFolderId,
-    updatedAt: Date.now(),
-  };
+  const doc = createDocument();
   state.documents.push(doc);
   activeId = doc.id;
   renderApp();
@@ -1774,8 +2524,12 @@ els.literatureMatrix.addEventListener("click", (event) => {
 });
 
 els.editor.addEventListener("input", () => {
+  hideEditorContextMenu();
+  syncBibliographySection();
   saveCurrentDocument();
   updateMetrics();
+  renderDocuments();
+  renderSelectionCitations();
   renderReferences();
   renderSourceChecks();
   runChecks();
@@ -1783,23 +2537,70 @@ els.editor.addEventListener("input", () => {
   scheduleLiveAcademicSearch();
 });
 
-els.editor.addEventListener("mouseup", getSelectedText);
-els.editor.addEventListener("keyup", getSelectedText);
+els.editor.addEventListener("mouseup", () => {
+  getSelectedText();
+  renderSelectionCitations();
+});
 
-document.querySelectorAll(".style-button").forEach((button) => {
+els.editor.addEventListener("keyup", () => {
+  getSelectedText();
+  renderSelectionCitations();
+});
+
+els.editor.addEventListener("contextmenu", (event) => {
+  const selectedText = getSelectedText();
+  const citationTarget = event.target.closest(".citation-token");
+  if (!selectedText && !citationTarget) return;
+  event.preventDefault();
+  showEditorContextMenu(event.clientX, event.clientY, event.target);
+});
+
+document.addEventListener("selectionchange", () => {
+  const selection = window.getSelection();
+  if (!selection?.anchorNode || !els.editor.contains(selection.anchorNode)) return;
+  getSelectedText();
+  renderSelectionCitations();
+});
+
+document.querySelectorAll(".citation-style-button").forEach((button) => {
   button.addEventListener("click", () => {
     activeDocument().style = button.dataset.style;
+    syncCitationTokens();
+    syncBibliographySection();
     saveCurrentDocument();
     renderApp();
   });
 });
 
+document.querySelectorAll("[data-command]").forEach((button) => {
+  button.addEventListener("click", () => {
+    applyFormattingSelection(button.dataset.command);
+  });
+});
+
+els.blockStyleSelect?.addEventListener("change", () => {
+  applyFormattingSelection("formatBlock", els.blockStyleSelect.value);
+});
+
+els.fontFamilySelect?.addEventListener("change", () => {
+  updateDocumentFormatting({ fontFamily: els.fontFamilySelect.value });
+});
+
+els.fontSizeSelect?.addEventListener("change", () => {
+  updateDocumentFormatting({ fontSize: Number(els.fontSizeSelect.value) || defaultFontSize });
+});
+
+els.lineHeightSelect?.addEventListener("change", () => {
+  updateDocumentFormatting({ lineHeight: Number(els.lineHeightSelect.value) || defaultLineHeight });
+});
+
+document.querySelector("#zoomOutButton")?.addEventListener("click", () => adjustZoom(-10));
+document.querySelector("#zoomInButton")?.addEventListener("click", () => adjustZoom(10));
+document.querySelector("#insertCitationButton")?.addEventListener("click", quickInsertCitation);
+
 document.querySelectorAll(".tab").forEach((tab) => {
   tab.addEventListener("click", () => {
-    document.querySelectorAll(".tab").forEach((item) => item.classList.remove("active"));
-    document.querySelectorAll(".panel").forEach((panel) => panel.classList.remove("active-panel"));
-    tab.classList.add("active");
-    document.querySelector(`#${tab.dataset.tab}Panel`).classList.add("active-panel");
+    activateTab(tab.dataset.tab);
   });
 });
 
@@ -1809,11 +2610,7 @@ els.referenceList.addEventListener("click", (event) => {
   const ref = lookupReference(citeId || addId);
   if (!ref) return;
 
-  if (citeId) {
-    insertAtCaret(` ${formatCitation(ref)} `);
-    saveCurrentDocument();
-    updateMetrics();
-  }
+  if (citeId) insertCitationForReference(ref);
   if (addId) addBibliography(ref);
 });
 
@@ -1823,12 +2620,7 @@ els.sourceCheckList.addEventListener("click", (event) => {
   const ref = lookupReference(citeId || addId);
   if (!ref) return;
 
-  if (citeId) {
-    insertAtCaret(` ${formatCitation(ref)} `);
-    saveCurrentDocument();
-    updateMetrics();
-    renderSourceChecks();
-  }
+  if (citeId) insertCitationForReference(ref);
   if (addId) addBibliography(ref);
 });
 
@@ -1838,12 +2630,31 @@ els.readingList.addEventListener("click", (event) => {
   const ref = lookupReference(citeId || addId);
   if (!ref) return;
 
+  if (citeId) insertCitationForReference(ref);
+  if (addId) addBibliography(ref);
+});
+
+els.selectionCitationList?.addEventListener("click", (event) => {
+  const citeId = event.target.dataset?.selectionCite;
   if (citeId) {
-    insertAtCaret(` ${formatCitation(ref)} `);
-    saveCurrentDocument();
-    updateMetrics();
-    renderSourceChecks();
+    insertCitationForReference(lookupReference(citeId));
+    return;
   }
+  if (event.target.dataset?.searchSelection) {
+    const selectedText = getSelectedText();
+    if (!selectedText) return;
+    document.querySelector("#referenceSearch").value = selectedText;
+    activateTab("references");
+    onlineSearch();
+  }
+});
+
+els.zoteroResults?.addEventListener("click", (event) => {
+  const citeId = event.target.dataset?.zoteroCite;
+  const addId = event.target.dataset?.zoteroAdd;
+  const ref = lookupReference(citeId || addId);
+  if (!ref) return;
+  if (citeId) insertCitationForReference(ref);
   if (addId) addBibliography(ref);
 });
 
@@ -1858,6 +2669,34 @@ document.querySelector("#refreshReferencesButton").addEventListener("click", () 
 document.querySelector("#runChecksButton").addEventListener("click", runChecks);
 document.querySelector("#onlineSearchButton").addEventListener("click", onlineSearch);
 document.querySelector("#exportButton").addEventListener("click", exportDoc);
+document.querySelector("#searchZoteroButton")?.addEventListener("click", () => searchZotero());
+document.querySelector("#useSelectionForSearchButton")?.addEventListener("click", () => {
+  const selectedText = getSelectedText();
+  if (!selectedText) return;
+  document.querySelector("#referenceSearch").value = selectedText;
+  els.zoteroSearchInput.value = selectedText;
+  activateTab("references");
+  onlineSearch();
+  if (state.zotero?.libraryId) searchZotero(selectedText);
+});
+
+document.querySelector("#referenceSearch")?.addEventListener("keydown", (event) => {
+  if (event.key === "Enter") {
+    event.preventDefault();
+    onlineSearch();
+  }
+});
+
+els.zoteroSearchInput?.addEventListener("keydown", (event) => {
+  if (event.key === "Enter") {
+    event.preventDefault();
+    searchZotero();
+  }
+});
+
+[els.zoteroLibraryType, els.zoteroLibraryId, els.zoteroApiKey, els.zoteroSearchInput].forEach((input) => {
+  input?.addEventListener("input", saveZoteroSettings);
+});
 
 document.querySelector("#googleButton").addEventListener("click", () => {
   const doc = activeDocument();
@@ -1880,6 +2719,8 @@ document.querySelector("#saveGoogleDocLinkButton").addEventListener("click", (ev
 });
 
 document.querySelector("#saveGoogleDocInlineButton").addEventListener("click", saveGoogleDocLink);
+document.querySelector("#importGoogleDocButton")?.addEventListener("click", importLinkedGoogleDocText);
+document.querySelector("#unlinkGoogleDocButton")?.addEventListener("click", unlinkGoogleDoc);
 
 document.querySelector("#githubButton").addEventListener("click", () => {
   els.githubInlinePanel.hidden = !els.githubInlinePanel.hidden;
@@ -1900,13 +2741,56 @@ document.querySelectorAll("[data-rewrite]").forEach((button) => {
 
 document.querySelector("#replaceSelectionButton").addEventListener("click", () => {
   if (!lastSelection || !els.rewriteOutput.value.trim()) return;
-  const selection = window.getSelection();
-  selection.removeAllRanges();
-  selection.addRange(lastSelection);
+  restoreSavedSelection();
   insertAtCaret(escapeHtml(els.rewriteOutput.value));
+  syncBibliographySection();
   saveCurrentDocument();
   updateMetrics();
   runChecks();
+});
+
+els.editorContextMenu?.addEventListener("click", (event) => {
+  const citeId = event.target.dataset?.contextCite;
+  if (citeId) {
+    insertCitationForReference(lookupReference(citeId));
+    hideEditorContextMenu();
+    return;
+  }
+  if (event.target.dataset?.contextSearch) {
+    const selectedText = getSelectedText();
+    if (selectedText) {
+      document.querySelector("#referenceSearch").value = selectedText;
+      activateTab("references");
+      onlineSearch();
+    }
+    hideEditorContextMenu();
+    return;
+  }
+  if (event.target.dataset?.contextZotero) {
+    const selectedText = getSelectedText();
+    if (selectedText) {
+      els.zoteroSearchInput.value = selectedText;
+      activateTab("sources");
+      searchZotero(selectedText);
+    }
+    hideEditorContextMenu();
+    return;
+  }
+  if (event.target.dataset?.contextRemove) {
+    removeCitationToken(contextCitationToken);
+    hideEditorContextMenu();
+  }
+});
+
+document.addEventListener("click", (event) => {
+  if (!els.editorContextMenu?.hidden && !els.editorContextMenu.contains(event.target)) {
+    hideEditorContextMenu();
+  }
+});
+
+window.addEventListener("scroll", hideEditorContextMenu, { passive: true });
+window.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") hideEditorContextMenu();
 });
 
 window.addEventListener("beforeunload", saveCurrentDocument);

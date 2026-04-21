@@ -4,6 +4,13 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Vellum Atelier</title>
+    <meta name="theme-color" content="#0d0f12" />
+    <meta
+      name="description"
+      content="Vellum Atelier is a local-first academic writing web app for theses, articles, citations, and source discovery."
+    />
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="icon" href="icon.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
@@ -74,7 +81,18 @@
               type="text"
               placeholder="https://github.com/you/thesis-writing.git or git@github.com:you/thesis-writing.git"
             />
-            <p id="githubSyncMessage">Pushes every 110 seconds when the local sync helper is running. SSH URLs are usually easiest on a Mac.</p>
+            <label for="githubBranchInput">Branch</label>
+            <input id="githubBranchInput" type="text" placeholder="main" />
+            <label for="githubTokenInput">Access token for browser sync</label>
+            <input
+              id="githubTokenInput"
+              type="password"
+              placeholder="Fine-grained token with Contents write access"
+            />
+            <p id="githubSyncMessage">
+              Add a token for browser-based sync across devices. Without a token, the
+              optional local sync helper can still push every 110 seconds.
+            </p>
             <button id="saveGithubRepoButton" class="primary-button" type="button">
               Save GitHub link
             </button>
@@ -87,7 +105,7 @@
 
       <main class="workspace">
         <header class="topbar">
-          <div>
+          <div class="topbar-title">
             <label for="docTitle">Current draft</label>
             <input id="docTitle" type="text" autocomplete="off" />
           </div>
@@ -111,22 +129,108 @@
               </select>
             </div>
             <div class="format-controls" aria-label="Citation style">
-              <button class="style-button active" data-style="apa" type="button">
+              <button class="citation-style-button active" data-style="apa" type="button">
                 APA
               </button>
-              <button class="style-button" data-style="harvard" type="button">
+              <button class="citation-style-button" data-style="harvard" type="button">
                 Harvard
               </button>
             </div>
-            <button id="themeToggleButton" class="style-button" type="button">
+            <button id="themeToggleButton" class="ghost-button theme-toggle" type="button">
               Dark mode on
             </button>
           </div>
         </header>
 
-        <section class="editor-stage" aria-label="Document editor">
-          <div id="editor" class="editor" contenteditable="true" spellcheck="true"></div>
+        <section class="editor-toolbar" aria-label="Document tools">
+          <div class="toolbar-group">
+            <label class="toolbar-label" for="blockStyleSelect">Format</label>
+            <select id="blockStyleSelect">
+              <option value="P">Paragraph</option>
+              <option value="H2">Heading 2</option>
+              <option value="H3">Heading 3</option>
+              <option value="BLOCKQUOTE">Quote</option>
+            </select>
+            <label class="toolbar-label" for="fontFamilySelect">Font</label>
+            <select id="fontFamilySelect">
+              <option value="Georgia">Georgia</option>
+              <option value="Times New Roman">Times New Roman</option>
+              <option value="Inter">Inter</option>
+              <option value="Arial">Arial</option>
+              <option value="Garamond">Garamond</option>
+            </select>
+            <label class="toolbar-label" for="fontSizeSelect">Size</label>
+            <select id="fontSizeSelect">
+              <option value="11">11</option>
+              <option value="12">12</option>
+              <option value="13">13</option>
+              <option value="14">14</option>
+              <option value="15">15</option>
+              <option value="16">16</option>
+              <option value="18">18</option>
+            </select>
+            <label class="toolbar-label desktop-only" for="lineHeightSelect">Spacing</label>
+            <select id="lineHeightSelect" class="desktop-only">
+              <option value="1.5">1.5</option>
+              <option value="1.65">1.65</option>
+              <option value="1.8">1.8</option>
+              <option value="2">2.0</option>
+            </select>
+          </div>
+          <div class="toolbar-group toolbar-actions desktop-only">
+            <button class="toolbar-button" data-command="bold" type="button" title="Bold">
+              B
+            </button>
+            <button class="toolbar-button" data-command="italic" type="button" title="Italic">
+              I
+            </button>
+            <button
+              class="toolbar-button"
+              data-command="underline"
+              type="button"
+              title="Underline"
+            >
+              U
+            </button>
+            <button
+              class="toolbar-button"
+              data-command="insertUnorderedList"
+              type="button"
+              title="Bulleted list"
+            >
+              Bullets
+            </button>
+            <button
+              class="toolbar-button"
+              data-command="insertOrderedList"
+              type="button"
+              title="Numbered list"
+            >
+              Numbered
+            </button>
+          </div>
+          <div class="toolbar-group toolbar-actions">
+            <button id="insertCitationButton" class="ghost-button" type="button">
+              Insert citation
+            </button>
+          </div>
+          <div class="toolbar-group toolbar-zoom">
+            <button id="zoomOutButton" class="toolbar-button" type="button" aria-label="Zoom out">
+              −
+            </button>
+            <span id="zoomLevelLabel">100%</span>
+            <button id="zoomInButton" class="toolbar-button" type="button" aria-label="Zoom in">
+              +
+            </button>
+          </div>
         </section>
+
+        <section class="editor-stage" aria-label="Document editor">
+          <div id="pageCanvas" class="page-canvas">
+            <div id="editor" class="editor" contenteditable="true" spellcheck="true"></div>
+          </div>
+        </section>
+        <div id="editorContextMenu" class="editor-context-menu" hidden></div>
 
         <footer class="metrics-bar" aria-label="Document counts">
           <span><strong id="wordCount">0</strong> words</span>
@@ -177,12 +281,71 @@
             </div>
             <span id="sourceCheckStatus" class="status-pill">Watching</span>
           </div>
+          <div class="selection-box">
+            <div class="reading-heading">
+              <div>
+                <p class="eyebrow">Selection</p>
+                <h2>Quick citation actions</h2>
+              </div>
+              <button id="useSelectionForSearchButton" class="small-button" type="button">
+                Search selection
+              </button>
+            </div>
+            <p id="selectionPreview" class="selection-preview">
+              Select a sentence or phrase in the editor. Right-click to cite it, or use the
+              suggestions here.
+            </p>
+            <div id="selectionCitationList" class="selection-citation-list"></div>
+          </div>
           <div id="sourceCheckList" class="check-list"></div>
           <div class="reading-heading">
             <p class="eyebrow">Read next</p>
             <h2>Suggested articles</h2>
           </div>
           <div id="readingList" class="reading-list"></div>
+          <div class="zotero-box">
+            <div class="panel-heading">
+              <div>
+                <p class="eyebrow">Zotero</p>
+                <h2>Your library</h2>
+              </div>
+              <button id="searchZoteroButton" class="small-button" type="button">Search</button>
+            </div>
+            <div class="zotero-grid">
+              <label>
+                Library
+                <select id="zoteroLibraryType">
+                  <option value="users">User library</option>
+                  <option value="groups">Group library</option>
+                </select>
+              </label>
+              <label>
+                Library ID
+                <input id="zoteroLibraryId" type="text" placeholder="e.g. 1234567" />
+              </label>
+              <label class="span-2">
+                API key
+                <input
+                  id="zoteroApiKey"
+                  type="password"
+                  placeholder="Needed for private libraries"
+                />
+              </label>
+              <label class="span-2">
+                Search
+                <input
+                  id="zoteroSearchInput"
+                  type="search"
+                  placeholder="Search your Zotero library by title, creator, or keyword"
+                />
+              </label>
+            </div>
+            <p id="zoteroStatus" class="fine-print">
+              Connect a public library with its user or group ID, or add an API key for a private
+              library.
+            </p>
+            <div id="zoteroResults" class="reference-list"></div>
+          </div>
           <p class="fine-print">
             This flags citation needs and possible source overlap while you
             write. It is a research aid, not a legal plagiarism report.
@@ -284,5 +447,12 @@
     </dialog>
 
     <script src="app.js"></script>
+    <script>
+      if ("serviceWorker" in navigator && location.protocol !== "file:") {
+        window.addEventListener("load", () => {
+          navigator.serviceWorker.register("./service-worker.js").catch(() => {});
+        });
+      }
+    </script>
   </body>
 </html>
