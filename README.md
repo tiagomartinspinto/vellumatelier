@@ -69,7 +69,7 @@ In the Sources tab:
 ## Notes
 
 - Zotero integration uses the official Zotero Web API.
-- The citation engine is much stronger now, but it is still not a full CSL desktop word-processor stack yet.
+- The citation engine is much stronger now, but it is still not a full CSL word-processor stack yet.
 - Similarity checking is an academic writing aid, not a formal institutional plagiarism report.
 - When opened as `file://`, the app still works, but service worker features do not.
 

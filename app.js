@@ -1,9 +1,9 @@
 const storageKey = "arted-phd-writer-state-v1";
 const defaultFolderId = "folder-unsorted";
 const defaultGithubBranch = "main";
-const defaultFontFamily = "Georgia";
-const defaultFontSize = 14;
-const defaultLineHeight = 1.75;
+const defaultFontFamily = "Times New Roman";
+const defaultFontSize = 12;
+const defaultLineHeight = 2;
 const defaultZoom = 100;
 
 function createDocument(overrides = {}) {
@@ -197,26 +197,42 @@ let zoteroReferences = [];
 let liveSearchTimer = null;
 let highlightTimer = null;
 let githubSnapshotTimer = null;
+let persistTimer = null;
+let analysisTimer = null;
 let lastLiveQuery = "";
 let lastGithubPushSignature = "";
 let contextCitationToken = null;
+const referenceTokenCache = new Map();
 const githubSyncEndpoint = "http://127.0.0.1:37110/api";
 
 const els = {
   documentList: document.querySelector("#documentList"),
+  outlineList: document.querySelector("#outlineList"),
   folderInlinePanel: document.querySelector("#folderInlinePanel"),
   folderNameInput: document.querySelector("#folderNameInput"),
   pageCanvas: document.querySelector("#pageCanvas"),
   editor: document.querySelector("#editor"),
   editorContextMenu: document.querySelector("#editorContextMenu"),
+  commandPalette: document.querySelector("#commandPalette"),
+  commandInput: document.querySelector("#commandInput"),
+  commandResults: document.querySelector("#commandResults"),
   docTitle: document.querySelector("#docTitle"),
+  workspaceMenuButton: document.querySelector("#workspaceMenuButton"),
+  workspaceMenu: document.querySelector("#workspaceMenu"),
   themeToggleButton: document.querySelector("#themeToggleButton"),
+  focusModeButton: document.querySelector("#focusModeButton"),
+  openCommandButton: document.querySelector("#openCommandButton"),
+  closeCommandButton: document.querySelector("#closeCommandButton"),
   projectMode: document.querySelector("#projectMode"),
   docStatus: document.querySelector("#docStatus"),
+  citationStyleSelect: document.querySelector("#citationStyleSelect"),
   blockStyleSelect: document.querySelector("#blockStyleSelect"),
   fontFamilySelect: document.querySelector("#fontFamilySelect"),
   fontSizeSelect: document.querySelector("#fontSizeSelect"),
   lineHeightSelect: document.querySelector("#lineHeightSelect"),
+  textAlignSelect: document.querySelector("#textAlignSelect"),
+  textToolsButton: document.querySelector("#textToolsButton"),
+  textToolsMenu: document.querySelector("#textToolsMenu"),
   zoomLevelLabel: document.querySelector("#zoomLevelLabel"),
   wordCount: document.querySelector("#wordCount"),
   charCount: document.querySelector("#charCount"),
@@ -243,18 +259,19 @@ const els = {
   literatureMatrix: document.querySelector("#literatureMatrix"),
   checkList: document.querySelector("#checkList"),
   syncState: document.querySelector("#syncState"),
-  googleInlinePanel: document.querySelector("#googleInlinePanel"),
-  googleDocLinkInlineInput: document.querySelector("#googleDocLinkInlineInput"),
-  googleInlineMessage: document.querySelector("#googleInlineMessage"),
   githubInlinePanel: document.querySelector("#githubInlinePanel"),
+  githubButton: document.querySelector("#githubButton"),
   githubRepoInput: document.querySelector("#githubRepoInput"),
   githubBranchInput: document.querySelector("#githubBranchInput"),
   githubTokenInput: document.querySelector("#githubTokenInput"),
+  githubActionsButton: document.querySelector("#githubActionsButton"),
+  githubActionsMenu: document.querySelector("#githubActionsMenu"),
+  githubModeBadge: document.querySelector("#githubModeBadge"),
+  githubDetail: document.querySelector("#githubDetail"),
   githubSyncMessage: document.querySelector("#githubSyncMessage"),
+  rewriteModeSelect: document.querySelector("#rewriteModeSelect"),
+  runRewriteButton: document.querySelector("#runRewriteButton"),
   rewriteOutput: document.querySelector("#rewriteOutput"),
-  googleDialog: document.querySelector("#googleDialog"),
-  googleDocLinkInput: document.querySelector("#googleDocLinkInput"),
-  googleDocIdDisplay: document.querySelector("#googleDocIdDisplay"),
 };
 
 function loadState() {
@@ -291,12 +308,25 @@ function normalizeState(value) {
   const folderIds = new Set(folders.map((folder) => folder.id));
   const documents = value.documents.map((doc) => ({
     ...createDocument(doc),
+    ...(() => {
+      const fontFamily = doc.fontFamily || defaultFontFamily;
+      const fontSize = Number(doc.fontSize) || defaultFontSize;
+      const lineHeight = Number(doc.lineHeight) || defaultLineHeight;
+      const useAcademicDefaults =
+        !doc.formattingPresetVersion &&
+        fontFamily === "Georgia" &&
+        fontSize === 14 &&
+        lineHeight === 1.75;
+      return {
+        fontFamily: useAcademicDefaults ? defaultFontFamily : fontFamily,
+        fontSize: useAcademicDefaults ? defaultFontSize : fontSize,
+        lineHeight: useAcademicDefaults ? defaultLineHeight : lineHeight,
+        formattingPresetVersion: 2,
+      };
+    })(),
     folderId: folderIds.has(doc.folderId) ? doc.folderId : defaultFolderId,
     status: doc.status || "Draft",
     manualReferences: Array.isArray(doc.manualReferences) ? doc.manualReferences : [],
-    fontFamily: doc.fontFamily || defaultFontFamily,
-    fontSize: Number(doc.fontSize) || defaultFontSize,
-    lineHeight: Number(doc.lineHeight) || defaultLineHeight,
     zoom: clampZoom(Number(doc.zoom) || defaultZoom),
   }));
 
@@ -317,6 +347,12 @@ function normalizeState(value) {
     githubRepoUrl: value.githubRepoUrl || "",
     githubBranch: value.githubBranch || defaultGithubBranch,
     githubToken: value.githubToken || "",
+    githubLastSyncAt: value.githubLastSyncAt || "",
+    githubLastAction: value.githubLastAction || "",
+    ui: {
+      focusMode: false,
+      ...(value.ui || {}),
+    },
     zotero: {
       libraryType: "users",
       libraryId: "",
@@ -337,6 +373,25 @@ function persist() {
     hour: "2-digit",
     minute: "2-digit",
   })}`;
+}
+
+function schedulePersist() {
+  if (els.syncState) {
+    els.syncState.textContent = "Saving locally...";
+  }
+  clearTimeout(persistTimer);
+  persistTimer = setTimeout(() => {
+    persistTimer = null;
+    persist();
+  }, 220);
+}
+
+function flushPersist() {
+  if (persistTimer) {
+    clearTimeout(persistTimer);
+    persistTimer = null;
+  }
+  persist();
 }
 
 function activeDocument() {
@@ -479,6 +534,9 @@ function deleteFolder(folderId) {
 function renderProjectPlan() {
   if (!els.researchQuestionInput) return;
   const project = state.project || {};
+  if (els.projectMode) {
+    els.projectMode.value = project.mode || "thesis";
+  }
   els.researchQuestionInput.value = project.researchQuestion || "";
   els.subQuestionsInput.value = project.subQuestions || "";
   els.methodologyInput.value = project.methodology || "";
@@ -489,13 +547,13 @@ function renderProjectPlan() {
 function saveProjectPlan() {
   state.project = {
     ...(state.project || {}),
-    mode: els.projectMode.value,
+    mode: els.projectMode?.value || state.project?.mode || "thesis",
     researchQuestion: els.researchQuestionInput.value,
     subQuestions: els.subQuestionsInput.value,
     methodology: els.methodologyInput.value,
     contribution: els.contributionInput.value,
   };
-  persist();
+  schedulePersist();
 }
 
 function renderLiteratureMatrix() {
@@ -541,7 +599,7 @@ function updateLiteratureRow(rowId, field, value) {
   const row = state.literatureMatrix.find((item) => item.id === rowId);
   if (!row) return;
   row[field] = value;
-  persist();
+  schedulePersist();
 }
 
 function deleteLiteratureRow(rowId) {
@@ -556,11 +614,13 @@ function clampZoom(value) {
 
 function fontStack(value) {
   const map = {
-    Georgia: 'Georgia, "Times New Roman", serif',
     "Times New Roman": '"Times New Roman", Times, serif',
-    Inter: 'Inter, ui-sans-serif, system-ui, sans-serif',
-    Arial: 'Arial, Helvetica, sans-serif',
+    Georgia: 'Georgia, "Times New Roman", serif',
+    Cambria: 'Cambria, Georgia, serif',
     Garamond: 'Garamond, Baskerville, serif',
+    Palatino: '"Palatino Linotype", Palatino, "Book Antiqua", serif',
+    Arial: 'Arial, Helvetica, sans-serif',
+    Calibri: 'Calibri, "Trebuchet MS", Arial, sans-serif',
   };
   return map[value] || map[defaultFontFamily];
 }
@@ -582,27 +642,77 @@ function renderFormattingToolbar(doc = activeDocument()) {
   if (els.fontFamilySelect) els.fontFamilySelect.value = doc.fontFamily || defaultFontFamily;
   if (els.fontSizeSelect) els.fontSizeSelect.value = String(doc.fontSize || defaultFontSize);
   if (els.lineHeightSelect) els.lineHeightSelect.value = String(doc.lineHeight || defaultLineHeight);
+  if (els.textAlignSelect) els.textAlignSelect.value = "justifyLeft";
+}
+
+function ensureHeadingAnchors() {
+  Array.from(els.editor.querySelectorAll("h2, h3, h4"))
+    .filter((heading) => !heading.closest("[data-bibliography-section='true']"))
+    .forEach((heading, index) => {
+    if (!heading.id) {
+      heading.id = `section-${index + 1}-${slugify(heading.textContent || "section")}`;
+    }
+  });
+}
+
+function renderOutline() {
+  if (!els.outlineList) return;
+  ensureHeadingAnchors();
+  const headings = Array.from(els.editor.querySelectorAll("h2, h3, h4")).filter(
+    (heading) => !heading.closest("[data-bibliography-section='true']"),
+  );
+  if (!headings.length) {
+    els.outlineList.innerHTML =
+      '<div class="outline-empty">Use headings to build a navigable chapter outline.</div>';
+    return;
+  }
+
+  els.outlineList.innerHTML = headings
+    .map(
+      (heading) => `
+        <button
+          class="outline-item depth-${heading.tagName === "H4" ? "4" : heading.tagName === "H3" ? "3" : "2"}"
+          type="button"
+          data-outline-target="${escapeAttribute(heading.id)}"
+        >
+          <span>${escapeHtml(heading.textContent.trim() || "Untitled section")}</span>
+          <small>${heading.tagName}</small>
+        </button>
+      `,
+    )
+    .join("");
+}
+
+function renderFocusMode() {
+  const focusMode = Boolean(state.ui?.focusMode);
+  document.body.classList.toggle("focus-mode", focusMode);
+  if (els.focusModeButton) {
+    els.focusModeButton.textContent = focusMode ? "Show sidebars" : "Hide sidebars";
+  }
 }
 
 function renderEditor() {
   const doc = activeDocument();
   els.docTitle.value = doc.title;
   els.docStatus.value = doc.status || "Draft";
-  els.projectMode.value = state.project?.mode || "thesis";
+  if (els.projectMode) {
+    els.projectMode.value = state.project?.mode || "thesis";
+  }
+  if (els.citationStyleSelect) els.citationStyleSelect.value = doc.style || "apa";
   els.editor.innerHTML = doc.content;
+  ensureHeadingAnchors();
   applyDocumentAppearance(doc);
   renderFormattingToolbar(doc);
   syncCitationTokens();
   syncBibliographySection();
-  document.querySelectorAll(".citation-style-button").forEach((button) => {
-    button.classList.toggle("active", button.dataset.style === doc.style);
-  });
 }
 
 function renderApp() {
+  renderFocusMode();
   renderDocuments();
   renderEditor();
-  renderGoogleDocState();
+  renderOutline();
+  renderGithubState();
   renderZoteroState();
   renderZoteroResults();
   renderProjectPlan();
@@ -614,7 +724,7 @@ function renderApp() {
   runChecks();
 }
 
-function saveCurrentDocument() {
+function captureCurrentDocument() {
   const doc = activeDocument();
   doc.title = els.docTitle.value.trim() || "Untitled";
   doc.status = els.docStatus.value || "Draft";
@@ -625,26 +735,12 @@ function saveCurrentDocument() {
   doc.lineHeight = Number(els.lineHeightSelect?.value) || doc.lineHeight || defaultLineHeight;
   doc.zoom = clampZoom(doc.zoom);
   doc.updatedAt = Date.now();
+  return doc;
+}
+
+function saveCurrentDocument() {
+  captureCurrentDocument();
   persist();
-}
-
-function renderGoogleDocState() {
-  const doc = activeDocument();
-  const hasLink = Boolean(doc.googleDocId);
-  if (els.googleDocLinkInlineInput) {
-    els.googleDocLinkInlineInput.value = googleDocEditUrl(doc);
-  }
-  if (els.googleInlineMessage) {
-    els.googleInlineMessage.textContent = hasLink
-      ? googleSyncMessage(doc)
-      : "Paste a shared edit link, then save it.";
-  }
-  renderGithubState();
-}
-
-function googleSyncMessage(doc = activeDocument()) {
-  if (!doc.googleDocId) return "Paste a shared edit link, then save it.";
-  return `Linked document ID: ${doc.googleDocId}.`;
 }
 
 function renderGithubState() {
@@ -656,11 +752,31 @@ function renderGithubState() {
   if (els.githubTokenInput) {
     els.githubTokenInput.value = state.githubToken || "";
   }
-  els.githubSyncMessage.textContent = state.githubRepoUrl
+  const syncMode = state.githubToken ? "Browser sync" : "Local helper";
+  const linked = Boolean(state.githubRepoUrl);
+  if (els.githubModeBadge) {
+    els.githubModeBadge.textContent = linked ? syncMode : "Not linked";
+    els.githubModeBadge.classList.toggle("connected", linked);
+  }
+  if (els.githubDetail) {
+    const lastNote = state.githubLastSyncAt
+      ? `Last ${state.githubLastAction || "sync"} at ${new Date(state.githubLastSyncAt).toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        })}.`
+      : "No sync run yet.";
+    els.githubDetail.textContent = linked
+      ? `${syncMode} on branch ${state.githubBranch || defaultGithubBranch}. ${lastNote}`
+      : "Connect a repository to keep this project in sync.";
+  }
+  els.githubSyncMessage.textContent = linked
     ? state.githubToken
-      ? "GitHub linked. Browser sync is ready and can push or pull across devices."
-      : "GitHub linked. The optional local sync helper can push every 110 seconds."
+      ? "This draft can now push and pull through GitHub directly in the browser."
+      : "This draft can use the optional local helper for automatic pushes every 110 seconds."
     : "Link a private repository. Add a token for browser sync across devices, or use the optional local sync helper.";
+  if (els.githubButton) {
+    els.githubButton.textContent = linked ? "GitHub settings" : "Connect GitHub";
+  }
 }
 
 function renderZoteroState() {
@@ -685,10 +801,48 @@ function renderTheme() {
   }
 }
 
+function closeMenu(menu, button) {
+  if (!menu || !button) return;
+  menu.hidden = true;
+  button.setAttribute("aria-expanded", "false");
+}
+
+function openMenu(menu, button) {
+  if (!menu || !button) return;
+  menu.hidden = false;
+  button.setAttribute("aria-expanded", "true");
+}
+
+function toggleMenu(menu, button) {
+  if (!menu || !button) return;
+  const willOpen = menu.hidden;
+  closeFloatingMenus();
+  if (willOpen) openMenu(menu, button);
+}
+
+function closeFloatingMenus() {
+  closeMenu(els.workspaceMenu, els.workspaceMenuButton);
+  closeMenu(els.textToolsMenu, els.textToolsButton);
+  closeMenu(els.githubActionsMenu, els.githubActionsButton);
+}
+
 function toggleTheme() {
   state.theme = state.theme === "day" ? "night" : "day";
   renderTheme();
   persist();
+}
+
+function setGithubStatus(message) {
+  if (els.githubSyncMessage) {
+    els.githubSyncMessage.textContent = message;
+  }
+}
+
+function noteGithubSync(action) {
+  state.githubLastAction = action;
+  state.githubLastSyncAt = new Date().toISOString();
+  persist();
+  renderGithubState();
 }
 
 async function saveGithubRepo() {
@@ -699,6 +853,8 @@ async function saveGithubRepo() {
     state.githubRepoUrl = "";
     state.githubBranch = defaultGithubBranch;
     state.githubToken = "";
+    state.githubLastSyncAt = "";
+    state.githubLastAction = "";
     persist();
     renderGithubState();
     return;
@@ -712,6 +868,170 @@ async function saveGithubRepo() {
   await sendGithubConfig();
   await sendGithubSnapshot("manual");
   scheduleGithubSnapshots();
+}
+
+function clearGithubRepo() {
+  state.githubRepoUrl = "";
+  state.githubBranch = defaultGithubBranch;
+  state.githubToken = "";
+  state.githubLastSyncAt = "";
+  state.githubLastAction = "";
+  clearInterval(githubSnapshotTimer);
+  persist();
+  renderGithubState();
+  setGithubStatus("GitHub connection removed from this browser.");
+}
+
+function toggleFocusMode() {
+  state.ui.focusMode = !state.ui.focusMode;
+  renderFocusMode();
+  persist();
+}
+
+function scheduleEditorAnalysis() {
+  clearTimeout(analysisTimer);
+  analysisTimer = setTimeout(() => {
+    analysisTimer = null;
+    renderDocuments();
+    renderOutline();
+    renderReferences();
+    renderSourceChecks();
+    runChecks();
+    renderSelectionCitations();
+    scheduleFocusHighlights();
+    scheduleLiveAcademicSearch();
+  }, 180);
+}
+
+function createNewDocument() {
+  flushPersist();
+  const doc = createDocument();
+  state.documents.push(doc);
+  activeId = doc.id;
+  renderApp();
+  persist();
+  els.editor.focus();
+}
+
+function openFolderPanel() {
+  els.folderInlinePanel.hidden = false;
+  els.folderNameInput?.focus();
+}
+
+function commandItems() {
+  return [
+    {
+      id: "new-draft",
+      label: "New draft",
+      hint: "Create a blank academic document",
+      run: createNewDocument,
+    },
+    {
+      id: "new-folder",
+      label: "New folder",
+      hint: "Create a folder for chapters or articles",
+      run: openFolderPanel,
+    },
+    {
+      id: "focus-mode",
+      label: state.ui?.focusMode ? "Show sidebars" : "Hide sidebars",
+      hint: "Toggle the library and research panels while you write",
+      run: toggleFocusMode,
+    },
+    {
+      id: "toggle-theme",
+      label: state.theme === "day" ? "Turn dark mode on" : "Turn dark mode off",
+      hint: "Switch the writing surface theme",
+      run: toggleTheme,
+    },
+    {
+      id: "insert-citation",
+      label: "Insert citation",
+      hint: "Use the best current source suggestion",
+      run: quickInsertCitation,
+    },
+    {
+      id: "search-sources",
+      label: "Search sources",
+      hint: "Jump to source search for the current topic",
+      run: () => {
+        activateTab("references");
+        document.querySelector("#referenceSearch")?.focus();
+      },
+    },
+    {
+      id: "search-zotero",
+      label: "Search Zotero",
+      hint: "Search your Zotero library from the current text",
+      run: () => {
+        activateTab("sources");
+        els.zoteroSearchInput?.focus();
+      },
+    },
+    {
+      id: "export-doc",
+      label: "Export Word",
+      hint: "Download the current draft as a Word-compatible document",
+      run: exportDoc,
+    },
+    {
+      id: "push-github",
+      label: "Push project now",
+      hint: "Send the latest project snapshot to GitHub",
+      run: () => sendGithubSnapshot("manual"),
+    },
+    {
+      id: "pull-github",
+      label: "Pull latest project",
+      hint: "Load the newest project snapshot from GitHub",
+      run: pullGithubSnapshot,
+    },
+  ];
+}
+
+function renderCommandResults(filter = "") {
+  if (!els.commandResults) return;
+  const query = filter.trim().toLowerCase();
+  const items = commandItems().filter((item) =>
+    !query ||
+    item.label.toLowerCase().includes(query) ||
+    item.hint.toLowerCase().includes(query) ||
+    item.id.includes(query.replace(/\s+/g, "-")),
+  );
+
+  els.commandResults.innerHTML = items
+    .map(
+      (item) => `
+        <button class="command-item" type="button" data-command-id="${escapeAttribute(item.id)}">
+          <span>${escapeHtml(item.label)}</span>
+          <small>${escapeHtml(item.hint)}</small>
+        </button>
+      `,
+    )
+    .join("") || '<div class="outline-empty">No actions matched that search.</div>';
+}
+
+function openCommandPalette() {
+  if (!els.commandPalette) return;
+  closeFloatingMenus();
+  els.commandPalette.hidden = false;
+  renderCommandResults("");
+  if (els.commandInput) {
+    els.commandInput.value = "";
+    els.commandInput.focus();
+  }
+}
+
+function closeCommandPalette() {
+  if (!els.commandPalette) return;
+  els.commandPalette.hidden = true;
+}
+
+function runCommand(commandId) {
+  const item = commandItems().find((entry) => entry.id === commandId);
+  if (!item) return;
+  closeCommandPalette();
+  item.run();
 }
 
 function scheduleGithubSnapshots() {
@@ -826,10 +1146,9 @@ async function sendGithubConfig() {
       }),
     });
     const result = await response.json();
-    els.githubSyncMessage.textContent = result.message || "GitHub repository linked.";
+    setGithubStatus(result.message || "GitHub repository linked.");
   } catch {
-    els.githubSyncMessage.textContent =
-      "GitHub helper is not running. Start it with: node sync-server.js";
+    setGithubStatus("GitHub helper is not running. Start it with: node sync-server.js");
   }
 }
 
@@ -841,14 +1160,15 @@ async function sendGithubSnapshot(reason = "auto") {
 
   try {
     if (state.githubToken) {
-      els.githubSyncMessage.textContent = "Pushing project snapshot to GitHub...";
+      setGithubStatus("Pushing project snapshot to GitHub...");
       const message = await sendGithubSnapshotViaApi(payload);
       lastGithubPushSignature = signature;
-      els.githubSyncMessage.textContent = message;
+      noteGithubSync("push");
+      setGithubStatus(message);
       return;
     }
 
-    els.githubSyncMessage.textContent = "Sending snapshot to GitHub helper...";
+    setGithubStatus("Sending snapshot to the local sync helper...");
     const response = await fetch(`${githubSyncEndpoint}/snapshot`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -856,14 +1176,16 @@ async function sendGithubSnapshot(reason = "auto") {
     });
     const result = await response.json();
     lastGithubPushSignature = signature;
-    els.githubSyncMessage.textContent =
+    noteGithubSync("push");
+    setGithubStatus(
       result.message ||
       `Snapshot handled at ${new Date().toLocaleTimeString([], {
         hour: "2-digit",
         minute: "2-digit",
-      })}.`;
+      })}.`,
+    );
   } catch (error) {
-    els.githubSyncMessage.textContent = githubSyncFailureMessage(error);
+    setGithubStatus(githubSyncFailureMessage(error));
   }
 }
 
@@ -871,14 +1193,15 @@ async function pullGithubSnapshot() {
   if (!state.githubRepoUrl) return;
   try {
     if (state.githubToken) {
-      els.githubSyncMessage.textContent = "Pulling latest GitHub snapshot...";
+      setGithubStatus("Pulling latest GitHub snapshot...");
       const snapshot = await pullGithubSnapshotViaApi();
       applyGithubSnapshot(snapshot);
-      els.githubSyncMessage.textContent = "Pulled latest GitHub snapshot.";
+      noteGithubSync("pull");
+      setGithubStatus("Pulled latest GitHub snapshot.");
       return;
     }
 
-    els.githubSyncMessage.textContent = "Pulling latest GitHub snapshot...";
+    setGithubStatus("Pulling latest GitHub snapshot...");
     const response = await fetch(`${githubSyncEndpoint}/pull`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -892,9 +1215,10 @@ async function pullGithubSnapshot() {
     if (result.snapshot) {
       applyGithubSnapshot(result.snapshot);
     }
-    els.githubSyncMessage.textContent = result.message || "Pulled latest GitHub snapshot.";
+    noteGithubSync("pull");
+    setGithubStatus(result.message || "Pulled latest GitHub snapshot.");
   } catch (error) {
-    els.githubSyncMessage.textContent = githubSyncFailureMessage(error);
+    setGithubStatus(githubSyncFailureMessage(error));
   }
 }
 
@@ -1026,7 +1350,7 @@ function currentParagraphText() {
   const selection = window.getSelection();
   const node = selection?.anchorNode;
   const element = node?.nodeType === Node.TEXT_NODE ? node.parentElement : node;
-  const block = element?.closest?.("p, li, blockquote, h2, h3");
+  const block = element?.closest?.("p, li, blockquote, h1, h2, h3, h4, h5");
 
   if (block && els.editor.contains(block)) {
     return block.innerText.replace(/\s+/g, " ").trim();
@@ -1239,6 +1563,14 @@ function escapeRegExp(value) {
   return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
+function slugify(value) {
+  return String(value || "section")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 40) || "section";
+}
+
 function suggestedReferences() {
   const text = textFromEditor().toLowerCase();
   const topic = detectTopic(text);
@@ -1332,14 +1664,27 @@ function referenceYear(ref) {
   return String(ref.year || ref.date || "n.d.");
 }
 
+function usesNumericCitations(style = activeDocument().style) {
+  return style === "ieee" || style === "vancouver";
+}
+
+function referenceNumber(ref, doc = activeDocument()) {
+  const order = Array.from(new Set([...(doc.references || []), ...(doc.manualReferences || [])]));
+  const index = order.indexOf(ref.id);
+  return index >= 0 ? index + 1 : order.length + 1;
+}
+
 function citationText(ref, style = activeDocument().style) {
-  if (ref.formattedCitationByStyle?.[style]) {
+  if (!usesNumericCitations(style) && ref.formattedCitationByStyle?.[style]) {
     return stripTags(ref.formattedCitationByStyle[style]).trim();
   }
   const authorList = referenceAuthors(ref);
   const first = surnameFromAuthor(authorList[0]);
   const year = referenceYear(ref);
   const authorLabel = authorList.length > 2 ? `${first} et al.` : first;
+  if (usesNumericCitations(style)) return `[${referenceNumber(ref)}]`;
+  if (style === "mla") return `(${authorLabel})`;
+  if (style === "chicago") return `(${authorLabel} ${year})`;
   if (style === "harvard") return `(${authorLabel} ${year})`;
   return `(${authorLabel}, ${year})`;
 }
@@ -1364,11 +1709,26 @@ function bibliographyText(ref, style = activeDocument().style) {
   const link = referenceLink(ref);
   const suffix = link ? ` ${escapeHtml(link)}.` : journal ? "." : "";
 
+  if (style === "mla") {
+    const authorText = authors.map(initialsFromAuthor).join(", ");
+    return `${authorText}. <em>${title}</em>${publisher ? `. ${publisher}` : ""}, ${year}${link ? `. ${escapeHtml(link)}` : ""}.`;
+  }
+
+  if (style === "ieee") {
+    const authorText = authors.join(", ");
+    return `${authorText}, "${title}," ${journal ? `<em>${journal}</em>, ` : ""}${year}${link ? `. ${escapeHtml(link)}` : ""}.`;
+  }
+
+  if (style === "vancouver") {
+    const authorText = authors.join(", ");
+    return `${authorText}. ${title}. ${journal || publisher}${year ? `. ${year}` : ""}${link ? `. ${escapeHtml(link)}` : ""}.`;
+  }
+
   if (ref.itemType === "journalArticle" || journal) {
     const authorText = style === "harvard"
       ? authors.map(initialsFromAuthor).join(" and ")
       : authors.map(initialsFromAuthor).join(", ");
-    if (style === "harvard") {
+    if (style === "harvard" || style === "chicago") {
       return `${authorText} ${year}, "${title}," <em>${journal}</em>${volumeIssue ? `, ${escapeHtml(volumeIssue)}` : ""}${pages}${suffix}`;
     }
     return `${authorText} (${year}). ${title}. <em>${journal}</em>${volumeIssue ? `, ${escapeHtml(volumeIssue)}` : ""}${pages}${suffix}`;
@@ -1379,7 +1739,7 @@ function bibliographyText(ref, style = activeDocument().style) {
     : authors.map(initialsFromAuthor).join(", ");
   const publisher = escapeHtml(ref.publisher || ref.source || "");
 
-  if (style === "harvard") {
+  if (style === "harvard" || style === "chicago") {
     return `${authorText} ${year}, <em>${title}</em>${publisher ? `. ${publisher}` : ""}${suffix}`;
   }
   return `${authorText}. (${year}). <em>${title}</em>${publisher ? `. ${publisher}` : ""}${suffix}`;
@@ -1390,7 +1750,20 @@ function formatCitation(ref, style = activeDocument().style) {
 }
 
 function formatBibliography(ref, style = activeDocument().style) {
-  return bibliographyText(ref, style);
+  const text = bibliographyText(ref, style);
+  if (style === "ieee") {
+    return `[${referenceNumber(ref)}] ${text}`;
+  }
+  if (style === "vancouver") {
+    return `${referenceNumber(ref)}. ${text}`;
+  }
+  return text;
+}
+
+function bibliographyHeading(style = activeDocument().style) {
+  if (style === "mla") return "Works Cited";
+  if (style === "chicago") return "Bibliography";
+  return "References";
 }
 
 function insertAtCaret(html) {
@@ -1453,14 +1826,14 @@ function syncBibliographySection() {
   breakEl.className = "page-break";
   breakEl.dataset.bibliographyBreak = "true";
   breakEl.contentEditable = "false";
-  breakEl.textContent = "Bibliography";
+  breakEl.textContent = bibliographyHeading(doc.style);
 
   const section = document.createElement("section");
   section.className = "bibliography-page";
   section.dataset.bibliographySection = "true";
   section.contentEditable = "false";
   section.innerHTML = `
-    <h2>${doc.style === "harvard" ? "References" : "References"}</h2>
+    <h2>${bibliographyHeading(doc.style)}</h2>
     <div class="bibliography-list">
       ${doc.references
         .map((id) => lookupReference(id))
@@ -1647,8 +2020,7 @@ function sourceMatchesForText(text) {
 
   return allKnownReferences()
     .map((ref) => {
-      const refText = `${ref.title} ${ref.abstract || ""} ${ref.topics?.join(" ") || ""}`;
-      const refTokens = tokenize(refText);
+      const refTokens = cachedReferenceTokens(ref);
       const score = weightedOverlap(sourceTokens, refTokens);
       return { ref, score };
     })
@@ -1657,7 +2029,7 @@ function sourceMatchesForText(text) {
 }
 
 function hasInTextCitation(text) {
-  return /\([A-Z][A-Za-z-]+(?: et al\.)?,? \d{4}\)|\([A-Z][A-Za-z-]+ \d{4}\)/.test(text);
+  return /\([A-Z][A-Za-z-]+(?: et al\.)?,? \d{4}\)|\([A-Z][A-Za-z-]+ \d{4}\)|\([A-Z][A-Za-z-]+\)|\[\d+\]/.test(text);
 }
 
 const stopWords = new Set([
@@ -1697,6 +2069,24 @@ function tokenize(text) {
         .filter((word) => word.length > 3 && !stopWords.has(word)),
     ),
   );
+}
+
+function cachedReferenceTokens(ref) {
+  const signature = [
+    ref.id,
+    ref.title,
+    ref.abstract,
+    ref.topics?.join("|"),
+    ref.source,
+  ].join("::");
+  const cached = referenceTokenCache.get(ref.id);
+  if (cached?.signature === signature) {
+    return cached.tokens;
+  }
+
+  const tokens = tokenize(`${ref.title} ${ref.abstract || ""} ${ref.topics?.join(" ") || ""}`);
+  referenceTokenCache.set(ref.id, { signature, tokens });
+  return tokens;
 }
 
 function weightedOverlap(sourceTokens, refTokens) {
@@ -1754,7 +2144,7 @@ function runChecks() {
 
   const claimWords = ["shows", "proves", "demonstrates", "argues", "suggests"];
   const hasClaim = claimWords.some((word) => lowerWords.includes(word));
-  const hasCitation = /\([A-Z][A-Za-z-]+(?: et al\.)?,? \d{4}\)/.test(text);
+  const hasCitation = hasInTextCitation(text);
   if (hasClaim && !hasCitation) {
     checks.push({
       level: "warning",
@@ -1847,12 +2237,19 @@ function saveZoteroSettings() {
     apiKey: els.zoteroApiKey.value.trim(),
     searchQuery: els.zoteroSearchInput.value.trim(),
   };
-  persist();
-  renderZoteroState();
+  schedulePersist();
 }
 
 function zoteroStyleId(style = activeDocument().style) {
-  return style === "harvard" ? "harvard-cite-them-right" : "apa";
+  const map = {
+    apa: "apa",
+    harvard: "harvard-cite-them-right",
+    chicago: "chicago-author-date",
+    mla: "modern-language-association",
+    ieee: "ieee",
+    vancouver: "vancouver",
+  };
+  return map[style] || "apa";
 }
 
 function zoteroLibraryPrefix() {
@@ -2149,194 +2546,6 @@ function exportDoc() {
   URL.revokeObjectURL(url);
 }
 
-function extractGoogleDocId(value) {
-  const text = String(value || "").trim();
-  const docMatch = text.match(/\/document\/d\/([a-zA-Z0-9_-]+)/);
-  if (docMatch) return docMatch[1];
-
-  try {
-    const url = new URL(text);
-    return url.searchParams.get("id") || "";
-  } catch {
-    return "";
-  }
-}
-
-function googleDocEditUrl(doc = activeDocument()) {
-  if (doc.googleDocUrl) return doc.googleDocUrl;
-  if (doc.googleDocId) return `https://docs.google.com/document/d/${doc.googleDocId}/edit`;
-  return "";
-}
-
-function saveGoogleDocLink() {
-  const url = (
-    els.googleDocLinkInlineInput?.value ||
-    els.googleDocLinkInput?.value ||
-    ""
-  ).trim();
-  const docId = extractGoogleDocId(url);
-  if (!docId) {
-    const message = "I could not find a Google Docs document ID in that link.";
-    if (els.googleDocIdDisplay) els.googleDocIdDisplay.textContent = message;
-    if (els.googleInlineMessage) els.googleInlineMessage.textContent = message;
-    return false;
-  }
-
-  const doc = activeDocument();
-  doc.googleDocId = docId;
-  doc.googleDocUrl = url || `https://docs.google.com/document/d/${docId}/edit`;
-  doc.updatedAt = Date.now();
-  if (els.googleDocIdDisplay) els.googleDocIdDisplay.textContent = `Linked document ID: ${docId}`;
-  if (els.googleInlineMessage) els.googleInlineMessage.textContent = `Linked document ID: ${docId}`;
-  persist();
-  renderGoogleDocState();
-  fetchAndApplyGoogleDocTitle(docId);
-  return true;
-}
-
-function openLinkedGoogleDoc() {
-  const url = googleDocEditUrl();
-  if (url) window.open(url, "_blank", "noopener,noreferrer");
-}
-
-async function copyDraftForGoogleDocs() {
-  saveCurrentDocument();
-  const doc = activeDocument();
-  const draftText = `${doc.title}\n\n${textFromEditor()}`;
-
-  try {
-    await navigator.clipboard.writeText(draftText);
-    els.syncState.textContent = "Draft copied. Paste it into the linked Google Doc.";
-  } catch {
-    fallbackCopyText(draftText);
-    els.syncState.textContent = "Draft selected for copying. Paste it into Google Docs.";
-  }
-}
-
-function fallbackCopyText(text) {
-  const textarea = document.createElement("textarea");
-  textarea.value = text;
-  textarea.setAttribute("readonly", "");
-  textarea.style.position = "fixed";
-  textarea.style.left = "-9999px";
-  document.body.appendChild(textarea);
-  textarea.select();
-  document.execCommand("copy");
-  textarea.remove();
-}
-
-async function importLinkedGoogleDocText() {
-  const doc = activeDocument();
-  const docId =
-    doc.googleDocId ||
-    extractGoogleDocId(els.googleDocLinkInlineInput?.value || els.googleDocLinkInput?.value);
-  if (!docId) {
-    const message = "Save a valid Google Docs link first.";
-    if (els.googleDocIdDisplay) els.googleDocIdDisplay.textContent = message;
-    if (els.googleInlineMessage) els.googleInlineMessage.textContent = message;
-    return;
-  }
-
-  setGoogleMessage("Pulling from Google Docs...");
-
-  try {
-    const response = await fetch(
-      `https://docs.google.com/document/d/${docId}/export?format=txt`,
-    );
-    if (!response.ok) throw new Error("Google export failed");
-    const text = await response.text();
-    if (!text.trim()) throw new Error("No text returned");
-
-    applyGoogleDocText(text);
-    activeDocument().lastGooglePullAt = Date.now();
-    persist();
-    setGoogleMessage("Pulled public Google Doc text.");
-  } catch {
-    const message =
-      "Import was blocked by Google or browser permissions. Open the Doc and copy/paste the text into the editor.";
-    setGoogleMessage(message);
-  }
-}
-
-function applyGoogleDocText(text, title = "") {
-  if (!text?.trim()) {
-    setGoogleMessage("Google returned no document text, so I kept your local draft unchanged.");
-    return;
-  }
-  const doc = activeDocument();
-  if (title?.trim()) {
-    doc.title = title.trim();
-  }
-  doc.content = text
-    .split(/\n{2,}/)
-    .map((paragraph) => `<p>${escapeHtml(paragraph.trim()).replace(/\n/g, "<br>")}</p>`)
-    .join("");
-  renderEditor();
-  saveCurrentDocument();
-  updateMetrics();
-  renderReferences();
-  renderSourceChecks();
-}
-
-async function fetchAndApplyGoogleDocTitle(docId = activeDocument().googleDocId) {
-  if (!docId) return;
-  const title = await fetchGoogleDocTitle(docId);
-  if (!title) return;
-  const doc = activeDocument();
-  doc.title = title;
-  doc.updatedAt = Date.now();
-  renderEditor();
-  renderDocuments();
-  persist();
-  setGoogleMessage(`Linked and renamed draft to "${title}".`);
-}
-
-async function fetchGoogleDocTitle(docId) {
-  const endpoints = [
-    `https://docs.google.com/document/d/${docId}/mobilebasic`,
-    `https://docs.google.com/document/d/${docId}/edit`,
-  ];
-
-  for (const endpoint of endpoints) {
-    try {
-      const response = await fetch(endpoint);
-      if (!response.ok) continue;
-      const html = await response.text();
-      const title =
-        html.match(/<title>(.*?)<\/title>/i)?.[1] ||
-        html.match(/"title"\s*:\s*"([^"]+)"/i)?.[1];
-      if (title) {
-        return title
-          .replace(/- Google Docs$/i, "")
-          .replace(/&amp;/g, "&")
-          .trim();
-      }
-    } catch {
-      // Public Google pages may block browser reads.
-    }
-  }
-  return "";
-}
-
-function setGoogleMessage(message) {
-  if (els.googleDocIdDisplay) els.googleDocIdDisplay.textContent = message;
-  if (els.googleInlineMessage) els.googleInlineMessage.textContent = message;
-}
-
-function unlinkGoogleDoc() {
-  const doc = activeDocument();
-  delete doc.googleDocId;
-  delete doc.googleDocUrl;
-  if (els.googleDocLinkInput) els.googleDocLinkInput.value = "";
-  if (els.googleDocLinkInlineInput) els.googleDocLinkInlineInput.value = "";
-  if (els.googleDocIdDisplay) els.googleDocIdDisplay.textContent = "No document linked yet.";
-  if (els.googleInlineMessage) {
-    els.googleInlineMessage.textContent = "No document linked yet.";
-  }
-  persist();
-  renderGoogleDocState();
-}
-
 function escapeHtml(value) {
   return String(value)
     .replaceAll("&", "&amp;")
@@ -2417,6 +2626,7 @@ function applyFormattingSelection(command, value = null) {
   document.execCommand(command, false, execValue);
   saveCurrentDocument();
   updateMetrics();
+  renderOutline();
 }
 
 function updateDocumentFormatting(partial) {
@@ -2443,15 +2653,7 @@ function quickInsertCitation() {
   insertCitationForReference(ref);
 }
 
-document.querySelector("#newDocumentButton").addEventListener("click", () => {
-  saveCurrentDocument();
-  const doc = createDocument();
-  state.documents.push(doc);
-  activeId = doc.id;
-  renderApp();
-  persist();
-  els.editor.focus();
-});
+document.querySelector("#newDocumentButton").addEventListener("click", createNewDocument);
 
 document.querySelector("#newFolderButton").addEventListener("click", () => {
   els.folderInlinePanel.hidden = !els.folderInlinePanel.hidden;
@@ -2489,17 +2691,26 @@ els.documentList.addEventListener("click", (event) => {
   }
 });
 
+els.outlineList?.addEventListener("click", (event) => {
+  const targetId = event.target.closest("[data-outline-target]")?.dataset.outlineTarget;
+  if (!targetId) return;
+  document.getElementById(targetId)?.scrollIntoView({ behavior: "smooth", block: "start" });
+});
+
 els.docTitle.addEventListener("input", () => {
-  saveCurrentDocument();
+  captureCurrentDocument();
+  schedulePersist();
   renderDocuments();
+  renderOutline();
 });
 
 els.docStatus.addEventListener("change", () => {
-  saveCurrentDocument();
+  captureCurrentDocument();
+  persist();
   renderDocuments();
 });
 
-els.projectMode.addEventListener("change", () => {
+els.projectMode?.addEventListener("change", () => {
   state.project.mode = els.projectMode.value;
   persist();
 });
@@ -2525,16 +2736,10 @@ els.literatureMatrix.addEventListener("click", (event) => {
 
 els.editor.addEventListener("input", () => {
   hideEditorContextMenu();
-  syncBibliographySection();
-  saveCurrentDocument();
+  captureCurrentDocument();
   updateMetrics();
-  renderDocuments();
-  renderSelectionCitations();
-  renderReferences();
-  renderSourceChecks();
-  runChecks();
-  scheduleFocusHighlights();
-  scheduleLiveAcademicSearch();
+  schedulePersist();
+  scheduleEditorAnalysis();
 });
 
 els.editor.addEventListener("mouseup", () => {
@@ -2562,19 +2767,18 @@ document.addEventListener("selectionchange", () => {
   renderSelectionCitations();
 });
 
-document.querySelectorAll(".citation-style-button").forEach((button) => {
-  button.addEventListener("click", () => {
-    activeDocument().style = button.dataset.style;
-    syncCitationTokens();
-    syncBibliographySection();
-    saveCurrentDocument();
-    renderApp();
-  });
+els.citationStyleSelect?.addEventListener("change", () => {
+  activeDocument().style = els.citationStyleSelect.value;
+  syncCitationTokens();
+  syncBibliographySection();
+  saveCurrentDocument();
+  renderApp();
 });
 
 document.querySelectorAll("[data-command]").forEach((button) => {
   button.addEventListener("click", () => {
     applyFormattingSelection(button.dataset.command);
+    closeMenu(els.textToolsMenu, els.textToolsButton);
   });
 });
 
@@ -2592,6 +2796,10 @@ els.fontSizeSelect?.addEventListener("change", () => {
 
 els.lineHeightSelect?.addEventListener("change", () => {
   updateDocumentFormatting({ lineHeight: Number(els.lineHeightSelect.value) || defaultLineHeight });
+});
+
+els.textAlignSelect?.addEventListener("change", () => {
+  applyFormattingSelection(els.textAlignSelect.value);
 });
 
 document.querySelector("#zoomOutButton")?.addEventListener("click", () => adjustZoom(-10));
@@ -2662,6 +2870,7 @@ document.querySelector("#refreshReferencesButton").addEventListener("click", () 
   updateMetrics();
   renderReferences();
   renderSourceChecks();
+  renderOutline();
   scheduleFocusHighlights();
   scheduleLiveAcademicSearch();
 });
@@ -2698,45 +2907,89 @@ els.zoteroSearchInput?.addEventListener("keydown", (event) => {
   input?.addEventListener("input", saveZoteroSettings);
 });
 
-document.querySelector("#googleButton").addEventListener("click", () => {
-  const doc = activeDocument();
-  els.googleInlinePanel.hidden = !els.googleInlinePanel.hidden;
-  els.googleDocLinkInlineInput.value = googleDocEditUrl(doc);
-  els.googleInlineMessage.textContent = doc.googleDocId
-    ? googleSyncMessage(doc)
-    : "Paste a shared edit link, then save it.";
-
-  els.googleDocLinkInput.value = googleDocEditUrl(doc);
-  els.googleDocIdDisplay.textContent = doc.googleDocId
-    ? `Linked document ID: ${doc.googleDocId}`
-    : "No document linked yet.";
-});
-
-document.querySelector("#saveGoogleDocLinkButton").addEventListener("click", (event) => {
-  if (!saveGoogleDocLink()) {
-    event.preventDefault();
-  }
-});
-
-document.querySelector("#saveGoogleDocInlineButton").addEventListener("click", saveGoogleDocLink);
-document.querySelector("#importGoogleDocButton")?.addEventListener("click", importLinkedGoogleDocText);
-document.querySelector("#unlinkGoogleDocButton")?.addEventListener("click", unlinkGoogleDoc);
-
 document.querySelector("#githubButton").addEventListener("click", () => {
+  closeFloatingMenus();
   els.githubInlinePanel.hidden = !els.githubInlinePanel.hidden;
   renderGithubState();
   if (!els.githubInlinePanel.hidden) els.githubRepoInput.focus();
 });
 
 document.querySelector("#saveGithubRepoButton").addEventListener("click", saveGithubRepo);
+document.querySelector("#pushGithubRepoButton").addEventListener("click", () => sendGithubSnapshot("manual"));
 document.querySelector("#pullGithubRepoButton").addEventListener("click", pullGithubSnapshot);
+document.querySelector("#clearGithubRepoButton").addEventListener("click", clearGithubRepo);
 els.themeToggleButton.addEventListener("click", toggleTheme);
+els.focusModeButton?.addEventListener("click", toggleFocusMode);
+els.openCommandButton?.addEventListener("click", openCommandPalette);
+els.closeCommandButton?.addEventListener("click", closeCommandPalette);
+els.workspaceMenuButton?.addEventListener("click", () => {
+  toggleMenu(els.workspaceMenu, els.workspaceMenuButton);
+});
+els.textToolsButton?.addEventListener("click", () => {
+  toggleMenu(els.textToolsMenu, els.textToolsButton);
+});
+els.githubActionsButton?.addEventListener("click", () => {
+  toggleMenu(els.githubActionsMenu, els.githubActionsButton);
+});
 
-document.querySelectorAll("[data-rewrite]").forEach((button) => {
-  button.addEventListener("click", () => {
-    const selected = getSelectedText();
-    els.rewriteOutput.value = rewriteText(selected, button.dataset.rewrite);
+[els.themeToggleButton, els.focusModeButton, els.openCommandButton].forEach((button) => {
+  button?.addEventListener("click", () => {
+    closeMenu(els.workspaceMenu, els.workspaceMenuButton);
   });
+});
+
+[
+  document.querySelector("#pushGithubRepoButton"),
+  document.querySelector("#pullGithubRepoButton"),
+  document.querySelector("#clearGithubRepoButton"),
+].forEach((button) => {
+  button?.addEventListener("click", () => {
+    closeMenu(els.githubActionsMenu, els.githubActionsButton);
+  });
+});
+
+[els.githubRepoInput, els.githubBranchInput, els.githubTokenInput].forEach((input) => {
+  input?.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      saveGithubRepo();
+    }
+  });
+});
+
+els.commandInput?.addEventListener("input", () => {
+  renderCommandResults(els.commandInput.value);
+});
+
+els.commandInput?.addEventListener("keydown", (event) => {
+  if (event.key === "Enter") {
+    event.preventDefault();
+    const firstCommandId = els.commandResults?.querySelector("[data-command-id]")?.dataset.commandId;
+    if (firstCommandId) runCommand(firstCommandId);
+  }
+});
+
+els.commandResults?.addEventListener("click", (event) => {
+  const commandId = event.target.closest("[data-command-id]")?.dataset.commandId;
+  if (commandId) runCommand(commandId);
+});
+
+els.commandPalette?.addEventListener("click", (event) => {
+  if (event.target.dataset?.closeCommand) {
+    closeCommandPalette();
+  }
+});
+
+document.addEventListener("click", (event) => {
+  if (!event.target.closest(".menu-anchor")) {
+    closeFloatingMenus();
+  }
+});
+
+els.runRewriteButton?.addEventListener("click", () => {
+  const selected = getSelectedText();
+  const mode = els.rewriteModeSelect?.value || "clarity";
+  els.rewriteOutput.value = rewriteText(selected, mode);
 });
 
 document.querySelector("#replaceSelectionButton").addEventListener("click", () => {
@@ -2790,10 +3043,27 @@ document.addEventListener("click", (event) => {
 
 window.addEventListener("scroll", hideEditorContextMenu, { passive: true });
 window.addEventListener("keydown", (event) => {
-  if (event.key === "Escape") hideEditorContextMenu();
+  if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+    event.preventDefault();
+    if (els.commandPalette?.hidden) {
+      openCommandPalette();
+    } else {
+      closeCommandPalette();
+    }
+    return;
+  }
+
+  if (event.key === "Escape") {
+    hideEditorContextMenu();
+    closeCommandPalette();
+    closeFloatingMenus();
+  }
 });
 
-window.addEventListener("beforeunload", saveCurrentDocument);
+window.addEventListener("beforeunload", () => {
+  captureCurrentDocument();
+  flushPersist();
+});
 
 renderApp();
 renderTheme();

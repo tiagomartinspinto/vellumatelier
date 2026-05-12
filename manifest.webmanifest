@@ -1,0 +1,17 @@
+{
+  "name": "Vellum Atelier",
+  "short_name": "Vellum",
+  "description": "Academic writing web app for theses, articles, citations, and source discovery.",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#0d0f12",
+  "theme_color": "#0d0f12",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

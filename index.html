@@ -9,19 +9,16 @@
       name="description"
       content="Vellum Atelier is a local-first academic writing web app for theses, articles, citations, and source discovery."
     />
-    <link rel="manifest" href="manifest.webmanifest" />
-    <link rel="icon" href="icon.svg" type="image/svg+xml" />
-    <link rel="stylesheet" href="styles.css" />
+    <meta name="app-build" content="2026-05-12-ui-refresh" />
+    <link rel="manifest" href="manifest.webmanifest?v=20260512-1" />
+    <link rel="icon" href="icon.svg?v=20260512-1" type="image/svg+xml" />
+    <link rel="stylesheet" href="styles.css?v=20260512-1" />
   </head>
   <body>
     <div class="app-shell">
       <aside class="sidebar" aria-label="Project navigation">
         <div class="brand">
-          <img
-            class="brand-image"
-            src="https://images.unsplash.com/photo-1513364776144-60967b0f800f?auto=format&fit=crop&w=240&q=80"
-            alt="Paintbrushes in a studio"
-          />
+          <img class="brand-image brand-icon" src="icon.svg?v=20260512-1" alt="" aria-hidden="true" />
           <div>
             <p class="eyebrow">Research writing studio</p>
             <h1>Vellum Atelier</h1>
@@ -29,96 +26,142 @@
           </div>
         </div>
 
-        <div class="quick-actions">
-          <button id="newDocumentButton" class="primary-button" type="button">
-            New draft
-          </button>
-          <button id="newFolderButton" class="ghost-button" type="button">
-            Folder
-          </button>
-        </div>
-        <div id="folderInlinePanel" class="folder-inline-panel" hidden>
-          <label for="folderNameInput">Folder name</label>
-          <input id="folderNameInput" type="text" placeholder="e.g. Literature review" />
-          <button id="saveFolderButton" class="primary-button" type="button">
-            Create folder
-          </button>
-        </div>
+        <div class="sidebar-stack">
+          <section class="sidebar-section library-section" aria-labelledby="libraryTitle">
+            <div class="section-head">
+              <div>
+                <h2 id="libraryTitle">Library</h2>
+                <p class="section-copy">Drafts and folders for this project.</p>
+              </div>
+              <div class="quick-actions compact-actions">
+                <button id="newDocumentButton" class="primary-button" type="button">
+                  New draft
+                </button>
+                <button id="newFolderButton" class="ghost-button" type="button">
+                  New folder
+                </button>
+              </div>
+            </div>
+            <div id="folderInlinePanel" class="folder-inline-panel" hidden>
+              <label for="folderNameInput">Folder name</label>
+              <input id="folderNameInput" type="text" placeholder="e.g. Literature review" />
+              <button id="saveFolderButton" class="primary-button" type="button">
+                Create folder
+              </button>
+            </div>
+            <nav class="library-nav">
+              <div id="documentList" class="document-list"></div>
+            </nav>
+          </section>
 
-        <nav>
-          <p class="nav-title">Library</p>
-          <div id="documentList" class="document-list"></div>
-        </nav>
-
-        <section class="sync-panel" aria-labelledby="syncTitle">
-          <h2 id="syncTitle">Export & links</h2>
-          <p id="syncState">Saved locally</p>
-          <button id="exportButton" class="ghost-button" type="button">
-            Export .doc
-          </button>
-          <button id="googleButton" class="ghost-button" type="button">
-            Link Google Doc
-          </button>
-          <div id="googleInlinePanel" class="google-inline-panel" hidden>
-            <label for="googleDocLinkInlineInput">Google Docs edit link</label>
-            <input
-              id="googleDocLinkInlineInput"
-              type="url"
-              placeholder="https://docs.google.com/document/d/.../edit"
-            />
-            <p id="googleInlineMessage">Paste a shared edit link, then save it.</p>
-            <button id="saveGoogleDocInlineButton" class="primary-button" type="button">
-              Save Google link
-            </button>
-          </div>
-          <button id="githubButton" class="ghost-button" type="button">
-            Link GitHub repository
-          </button>
-          <div id="githubInlinePanel" class="google-inline-panel" hidden>
-            <label for="githubRepoInput">GitHub repository URL</label>
-            <input
-              id="githubRepoInput"
-              type="text"
-              placeholder="https://github.com/you/thesis-writing.git or git@github.com:you/thesis-writing.git"
-            />
-            <label for="githubBranchInput">Branch</label>
-            <input id="githubBranchInput" type="text" placeholder="main" />
-            <label for="githubTokenInput">Access token for browser sync</label>
-            <input
-              id="githubTokenInput"
-              type="password"
-              placeholder="Fine-grained token with Contents write access"
-            />
-            <p id="githubSyncMessage">
-              Add a token for browser-based sync across devices. Without a token, the
-              optional local sync helper can still push every 110 seconds.
-            </p>
-            <button id="saveGithubRepoButton" class="primary-button" type="button">
-              Save GitHub link
-            </button>
-            <button id="pullGithubRepoButton" class="ghost-button" type="button">
-              Pull latest
-            </button>
-          </div>
-        </section>
+          <section class="sync-panel sidebar-section backup-panel" aria-labelledby="syncTitle">
+            <div class="section-head storage-head">
+              <div>
+                <h2 id="syncTitle">Backup</h2>
+                <p class="section-copy">Keep this project on GitHub or export a Word copy.</p>
+              </div>
+            </div>
+            <p id="syncState">Saved locally</p>
+            <div class="storage-actions">
+              <button id="exportButton" class="ghost-button" type="button">
+                Export Word
+              </button>
+              <button id="githubButton" class="ghost-button" type="button">
+                Connect GitHub
+              </button>
+            </div>
+            <div id="githubInlinePanel" class="storage-panel" hidden>
+              <div class="sync-summary">
+                <span id="githubModeBadge" class="sync-badge">Not linked</span>
+                <span id="githubDetail" class="sync-detail">
+                  Connect a repository to keep this project in sync.
+                </span>
+              </div>
+              <label for="githubRepoInput">GitHub repository URL</label>
+              <input
+                id="githubRepoInput"
+                type="text"
+                placeholder="https://github.com/you/thesis-writing.git or git@github.com:you/thesis-writing.git"
+              />
+              <label for="githubBranchInput">Branch</label>
+              <input id="githubBranchInput" type="text" placeholder="main" />
+              <label for="githubTokenInput">Access token for browser sync</label>
+              <input
+                id="githubTokenInput"
+                type="password"
+                placeholder="Fine-grained token with Contents write access"
+              />
+              <p id="githubSyncMessage">
+                Add a token for browser-based sync across devices. Without a token, the
+                optional local sync helper can still push every 110 seconds.
+              </p>
+              <div class="sync-actions">
+                <button id="saveGithubRepoButton" class="primary-button" type="button">
+                  Save connection
+                </button>
+                <div class="menu-anchor sync-action-anchor">
+                  <button
+                    id="githubActionsButton"
+                    class="ghost-button"
+                    type="button"
+                    aria-expanded="false"
+                    aria-controls="githubActionsMenu"
+                  >
+                    Sync actions
+                  </button>
+                  <div id="githubActionsMenu" class="dropdown-menu sync-dropdown" hidden>
+                    <button id="pushGithubRepoButton" class="menu-action" type="button">
+                      Push now
+                    </button>
+                    <button id="pullGithubRepoButton" class="menu-action" type="button">
+                      Pull latest
+                    </button>
+                    <button id="clearGithubRepoButton" class="menu-action warning-action" type="button">
+                      Disconnect
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <p class="fine-print">
+                Browser sync is the easiest option for multi-device use. The local helper is
+                only there if you want Git to run from this machine directly.
+              </p>
+            </div>
+          </section>
+        </div>
       </aside>
 
       <main class="workspace">
         <header class="topbar">
           <div class="topbar-title">
             <label for="docTitle">Current draft</label>
-            <input id="docTitle" type="text" autocomplete="off" />
+            <input id="docTitle" type="text" autocomplete="off" placeholder="Untitled draft" />
           </div>
-          <div class="topbar-controls">
-            <div class="field-chip">
-              <span>Mode</span>
-              <select id="projectMode">
-                <option value="thesis">PhD thesis</option>
-                <option value="article">Journal article</option>
-                <option value="proposal">Research proposal</option>
-                <option value="literature-review">Literature review</option>
-              </select>
+          <div class="topbar-utilities">
+            <div class="menu-anchor">
+              <button
+                id="workspaceMenuButton"
+                class="ghost-button theme-toggle"
+                type="button"
+                aria-expanded="false"
+                aria-controls="workspaceMenu"
+              >
+                View
+              </button>
+              <div id="workspaceMenu" class="dropdown-menu utility-menu" hidden>
+                <button id="themeToggleButton" class="menu-action" type="button">
+                  Dark mode on
+                </button>
+                <button id="focusModeButton" class="menu-action" type="button">
+                  Hide sidebars
+                </button>
+                <button id="openCommandButton" class="menu-action" type="button">
+                  Quick actions
+                </button>
+              </div>
             </div>
+          </div>
+          <div class="topbar-meta">
             <div class="field-chip">
               <span>Status</span>
               <select id="docStatus">
@@ -128,17 +171,17 @@
                 <option value="Ready">Ready</option>
               </select>
             </div>
-            <div class="format-controls" aria-label="Citation style">
-              <button class="citation-style-button active" data-style="apa" type="button">
-                APA
-              </button>
-              <button class="citation-style-button" data-style="harvard" type="button">
-                Harvard
-              </button>
+            <div class="field-chip style-chip">
+              <span>Style</span>
+              <select id="citationStyleSelect" aria-label="Citation style">
+                <option value="apa">APA 7</option>
+                <option value="harvard">Harvard</option>
+                <option value="chicago">Chicago</option>
+                <option value="mla">MLA</option>
+                <option value="ieee">IEEE</option>
+                <option value="vancouver">Vancouver</option>
+              </select>
             </div>
-            <button id="themeToggleButton" class="ghost-button theme-toggle" type="button">
-              Dark mode on
-            </button>
           </div>
         </header>
 
@@ -146,68 +189,94 @@
           <div class="toolbar-group">
             <label class="toolbar-label" for="blockStyleSelect">Format</label>
             <select id="blockStyleSelect">
-              <option value="P">Paragraph</option>
-              <option value="H2">Heading 2</option>
-              <option value="H3">Heading 3</option>
-              <option value="BLOCKQUOTE">Quote</option>
+              <option value="P">Body text</option>
+              <option value="H1">Title</option>
+              <option value="H5">Subtitle</option>
+              <option value="H2">Heading 1</option>
+              <option value="H3">Heading 2</option>
+              <option value="H4">Heading 3</option>
+              <option value="BLOCKQUOTE">Block quote</option>
             </select>
             <label class="toolbar-label" for="fontFamilySelect">Font</label>
             <select id="fontFamilySelect">
-              <option value="Georgia">Georgia</option>
               <option value="Times New Roman">Times New Roman</option>
-              <option value="Inter">Inter</option>
-              <option value="Arial">Arial</option>
+              <option value="Georgia">Georgia</option>
+              <option value="Cambria">Cambria</option>
               <option value="Garamond">Garamond</option>
+              <option value="Palatino">Palatino</option>
+              <option value="Arial">Arial</option>
+              <option value="Calibri">Calibri</option>
             </select>
             <label class="toolbar-label" for="fontSizeSelect">Size</label>
             <select id="fontSizeSelect">
+              <option value="10">10</option>
               <option value="11">11</option>
               <option value="12">12</option>
               <option value="13">13</option>
               <option value="14">14</option>
-              <option value="15">15</option>
               <option value="16">16</option>
               <option value="18">18</option>
+              <option value="20">20</option>
             </select>
             <label class="toolbar-label desktop-only" for="lineHeightSelect">Spacing</label>
             <select id="lineHeightSelect" class="desktop-only">
+              <option value="1">1.0</option>
+              <option value="1.15">1.15</option>
               <option value="1.5">1.5</option>
-              <option value="1.65">1.65</option>
-              <option value="1.8">1.8</option>
               <option value="2">2.0</option>
             </select>
+            <label class="toolbar-label desktop-only" for="textAlignSelect">Align</label>
+            <select id="textAlignSelect" class="desktop-only">
+              <option value="justifyLeft">Left</option>
+              <option value="justifyCenter">Center</option>
+              <option value="justifyRight">Right</option>
+              <option value="justifyFull">Justify</option>
+            </select>
           </div>
-          <div class="toolbar-group toolbar-actions desktop-only">
-            <button class="toolbar-button" data-command="bold" type="button" title="Bold">
-              B
-            </button>
-            <button class="toolbar-button" data-command="italic" type="button" title="Italic">
-              I
-            </button>
-            <button
-              class="toolbar-button"
-              data-command="underline"
-              type="button"
-              title="Underline"
-            >
-              U
-            </button>
-            <button
-              class="toolbar-button"
-              data-command="insertUnorderedList"
-              type="button"
-              title="Bulleted list"
-            >
-              Bullets
-            </button>
-            <button
-              class="toolbar-button"
-              data-command="insertOrderedList"
-              type="button"
-              title="Numbered list"
-            >
-              Numbered
-            </button>
+          <div class="toolbar-group toolbar-actions desktop-only toolbar-menu-group">
+            <div class="menu-anchor">
+              <button
+                id="textToolsButton"
+                class="ghost-button toolbar-menu-button"
+                type="button"
+                aria-expanded="false"
+                aria-controls="textToolsMenu"
+              >
+                Text tools
+              </button>
+              <div id="textToolsMenu" class="dropdown-menu toolbar-dropdown" hidden>
+                <button class="menu-action" data-command="bold" type="button" title="Bold">
+                  Bold
+                </button>
+                <button class="menu-action" data-command="italic" type="button" title="Italic">
+                  Italic
+                </button>
+                <button
+                  class="menu-action"
+                  data-command="underline"
+                  type="button"
+                  title="Underline"
+                >
+                  Underline
+                </button>
+                <button
+                  class="menu-action"
+                  data-command="insertUnorderedList"
+                  type="button"
+                  title="Bulleted list"
+                >
+                  Bulleted list
+                </button>
+                <button
+                  class="menu-action"
+                  data-command="insertOrderedList"
+                  type="button"
+                  title="Numbered list"
+                >
+                  Numbered list
+                </button>
+              </div>
+            </div>
           </div>
           <div class="toolbar-group toolbar-actions">
             <button id="insertCitationButton" class="ghost-button" type="button">
@@ -246,12 +315,21 @@
           <p class="eyebrow">Research desk</p>
           <h2>Context, sources, revision</h2>
         </div>
+        <section class="outline-panel assistant-outline" aria-labelledby="outlineTitle">
+          <div class="panel-heading compact">
+            <div>
+              <p class="eyebrow">Structure</p>
+              <h2 id="outlineTitle">Outline</h2>
+            </div>
+          </div>
+          <div id="outlineList" class="outline-list"></div>
+        </section>
         <div class="tabs" role="tablist">
           <button class="tab active" data-tab="references" type="button">Focus</button>
           <button class="tab" data-tab="sources" type="button">Sources</button>
           <button class="tab" data-tab="plan" type="button">Plan</button>
           <button class="tab" data-tab="checks" type="button">Review</button>
-          <button class="tab" data-tab="rewrite" type="button">Rewrite</button>
+          <button class="tab" data-tab="rewrite" type="button">Revise</button>
         </div>
 
         <section id="referencesPanel" class="panel active-panel">
@@ -361,6 +439,14 @@
             <button id="addLiteratureRowButton" class="small-button" type="button">Add source</button>
           </div>
           <div class="plan-form">
+            <label for="projectMode">Project type</label>
+            <select id="projectMode">
+              <option value="thesis">Thesis chapter</option>
+              <option value="article">Journal article</option>
+              <option value="proposal">Research proposal</option>
+              <option value="literature-review">Literature review</option>
+              <option value="conference-paper">Conference paper</option>
+            </select>
             <label for="researchQuestionInput">Main research question</label>
             <textarea id="researchQuestionInput" placeholder="What is the central question this project answers?"></textarea>
             <label for="subQuestionsInput">Sub-questions</label>
@@ -395,11 +481,15 @@
               <h2>Revise selected text</h2>
             </div>
           </div>
-          <div class="rewrite-actions">
-            <button data-rewrite="clarity" type="button">Clarify</button>
-            <button data-rewrite="academic" type="button">More academic</button>
-            <button data-rewrite="concise" type="button">Shorten</button>
-            <button data-rewrite="reflective" type="button">Reflective voice</button>
+          <div class="rewrite-controls">
+            <label for="rewriteModeSelect">Mode</label>
+            <select id="rewriteModeSelect">
+              <option value="clarity">Clarify</option>
+              <option value="academic">More academic</option>
+              <option value="concise">Shorten</option>
+              <option value="reflective">Reflective voice</option>
+            </select>
+            <button id="runRewriteButton" class="ghost-button" type="button">Generate</button>
           </div>
           <textarea id="rewriteOutput" readonly placeholder="Select text in the editor, then choose a rewrite mode."></textarea>
           <button id="replaceSelectionButton" class="primary-button" type="button">
@@ -409,48 +499,41 @@
       </aside>
     </div>
 
-    <dialog id="googleDialog">
-      <form method="dialog">
-        <h2>Link Google Doc</h2>
-        <p>
-          Paste the shared Google Docs editing link for this draft. The app
-          will remember it, open it for editing, and help you move text between
-          the local draft and Google Docs.
-        </p>
-        <label for="googleDocLinkInput">Google Docs edit link</label>
-        <input
-          id="googleDocLinkInput"
-          type="url"
-          placeholder="https://docs.google.com/document/d/.../edit"
-        />
-        <p id="googleDocIdDisplay" class="fine-print">No document linked yet.</p>
-        <p class="fine-print">
-          A public edit link allows human editing in Google Docs. Automatic
-          write-back through the official Google Docs API still requires Google
-          OAuth permission.
-        </p>
-        <div class="dialog-actions">
-          <button id="importGoogleDocButton" type="button" class="ghost-button">
-            Try import text
-          </button>
-          <button id="unlinkGoogleDocButton" type="button" class="ghost-button">
-            Unlink
-          </button>
+    <div id="commandPalette" class="command-palette" hidden>
+      <div class="command-backdrop" data-close-command="true"></div>
+      <div class="command-shell" role="dialog" aria-modal="true" aria-labelledby="commandTitle">
+        <div class="command-header">
+          <div>
+            <p class="eyebrow">Quick actions</p>
+            <h2 id="commandTitle">Move fast</h2>
+          </div>
+          <button id="closeCommandButton" class="ghost-button" type="button">Close</button>
         </div>
-        <menu>
-          <button value="cancel" class="ghost-button">Close</button>
-          <button id="saveGoogleDocLinkButton" value="default" class="primary-button">
-            Save link
-          </button>
-        </menu>
-      </form>
-    </dialog>
+        <input
+          id="commandInput"
+          type="search"
+          placeholder="Type an action like new draft, citation, focus mode, or export"
+          autocomplete="off"
+        />
+        <div id="commandResults" class="command-results"></div>
+      </div>
+    </div>
 
-    <script src="app.js"></script>
+    <script src="app.js?v=20260512-1"></script>
     <script>
       if ("serviceWorker" in navigator && location.protocol !== "file:") {
         window.addEventListener("load", () => {
-          navigator.serviceWorker.register("./service-worker.js").catch(() => {});
+          let refreshing = false;
+          navigator.serviceWorker.addEventListener("controllerchange", () => {
+            if (refreshing) return;
+            refreshing = true;
+            window.location.reload();
+          });
+
+          navigator.serviceWorker
+            .register("./service-worker.js?v=20260512-1")
+            .then((registration) => registration.update())
+            .catch(() => {});
         });
       }
     </script>
