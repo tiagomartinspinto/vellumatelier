@@ -1,3 +1,0 @@
-# Untitled academic draft
-
-

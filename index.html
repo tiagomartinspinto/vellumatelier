@@ -9,16 +9,16 @@
       name="description"
       content="Vellum Atelier is a local-first academic writing web app for theses, articles, citations, and source discovery."
     />
-    <meta name="app-build" content="2026-05-12-ui-refresh" />
-    <link rel="manifest" href="manifest.webmanifest?v=20260512-1" />
-    <link rel="icon" href="icon.svg?v=20260512-1" type="image/svg+xml" />
-    <link rel="stylesheet" href="styles.css?v=20260512-1" />
+    <meta name="app-build" content="2026-05-14-security-refresh" />
+    <link rel="manifest" href="manifest.webmanifest?v=20260514-1" />
+    <link rel="icon" href="assets/icon.svg?v=20260514-1" type="image/svg+xml" />
+    <link rel="stylesheet" href="styles/app.css?v=20260514-1" />
   </head>
   <body>
     <div class="app-shell">
       <aside class="sidebar" aria-label="Project navigation">
         <div class="brand">
-          <img class="brand-image brand-icon" src="icon.svg?v=20260512-1" alt="" aria-hidden="true" />
+          <img class="brand-image brand-icon" src="assets/icon.svg?v=20260514-1" alt="" aria-hidden="true" />
           <div>
             <p class="eyebrow">Research writing studio</p>
             <h1>Vellum Atelier</h1>
@@ -58,18 +58,36 @@
             <div class="section-head storage-head">
               <div>
                 <h2 id="syncTitle">Backup</h2>
-                <p class="section-copy">Keep this project on GitHub or export a Word copy.</p>
+                <p class="section-copy">Keep this project on GitHub or export a browser-safe backup.</p>
               </div>
             </div>
             <p id="syncState">Saved locally</p>
             <div class="storage-actions">
               <button id="exportButton" class="ghost-button" type="button">
-                Export Word
+                Export Word-compatible
+              </button>
+              <button id="exportProjectButton" class="ghost-button" type="button">
+                Export JSON
+              </button>
+              <button id="importProjectButton" class="ghost-button" type="button">
+                Import JSON
               </button>
               <button id="githubButton" class="ghost-button" type="button">
                 Connect GitHub
               </button>
             </div>
+            <button id="clearLocalDataButton" class="ghost-button warning-button" type="button">
+              Reset browser data
+            </button>
+            <button id="clearSessionTokensButton" class="ghost-button" type="button">
+              Clear session tokens
+            </button>
+            <p id="backupMessage" class="fine-print backup-note">
+              This app is local-first. Drafts are autosaved in this browser using localStorage,
+              which is not encrypted. GitHub tokens and private Zotero API keys stay only in the
+              current browser session.
+            </p>
+            <input id="importFileInput" type="file" accept="application/json,.json" hidden />
             <div id="githubInlinePanel" class="storage-panel" hidden>
               <div class="sync-summary">
                 <span id="githubModeBadge" class="sync-badge">Not linked</span>
@@ -85,15 +103,16 @@
               />
               <label for="githubBranchInput">Branch</label>
               <input id="githubBranchInput" type="text" placeholder="main" />
-              <label for="githubTokenInput">Access token for browser sync</label>
+              <label for="githubTokenInput">Access token for browser sync (session only)</label>
               <input
                 id="githubTokenInput"
                 type="password"
                 placeholder="Fine-grained token with Contents write access"
               />
               <p id="githubSyncMessage">
-                Add a token for browser-based sync across devices. Without a token, the
-                optional local sync helper can still push every 110 seconds.
+                Add a token for browser-based sync across devices. This token is kept only for the
+                current session and is never saved in localStorage. Without a token, the optional
+                local sync helper can still push every 110 seconds.
               </p>
               <div class="sync-actions">
                 <button id="saveGithubRepoButton" class="primary-button" type="button">
@@ -123,8 +142,8 @@
                 </div>
               </div>
               <p class="fine-print">
-                Browser sync is the easiest option for multi-device use. The local helper is
-                only there if you want Git to run from this machine directly.
+                Browser sync is the easiest option for multi-device use. The local helper is only
+                there if you want Git to run from this machine directly.
               </p>
             </div>
           </section>
@@ -402,7 +421,7 @@
                 <input id="zoteroLibraryId" type="text" placeholder="e.g. 1234567" />
               </label>
               <label class="span-2">
-                API key
+                API key (session only)
                 <input
                   id="zoteroApiKey"
                   type="password"
@@ -420,7 +439,7 @@
             </div>
             <p id="zoteroStatus" class="fine-print">
               Connect a public library with its user or group ID, or add an API key for a private
-              library.
+              library. Private keys stay only for the current browser session.
             </p>
             <div id="zoteroResults" class="reference-list"></div>
           </div>
@@ -433,7 +452,7 @@
         <section id="planPanel" class="panel">
           <div class="panel-heading">
             <div>
-              <p class="eyebrow">PhD structure</p>
+              <p class="eyebrow">Project structure</p>
               <h2>Project plan</h2>
             </div>
             <button id="addLiteratureRowButton" class="small-button" type="button">Add source</button>
@@ -452,9 +471,9 @@
             <label for="subQuestionsInput">Sub-questions</label>
             <textarea id="subQuestionsInput" placeholder="One sub-question per line"></textarea>
             <label for="methodologyInput">Methodology</label>
-            <textarea id="methodologyInput" placeholder="e.g. arts-based research, a/r/tography, interviews, visual analysis"></textarea>
+            <textarea id="methodologyInput" placeholder="e.g. case study, interviews, survey, textual analysis"></textarea>
             <label for="contributionInput">Contribution</label>
-            <textarea id="contributionInput" placeholder="What does this project add to art education?"></textarea>
+            <textarea id="contributionInput" placeholder="What does this project add to the field?"></textarea>
           </div>
           <div class="reading-heading">
             <p class="eyebrow">Literature review</p>
@@ -519,7 +538,7 @@
       </div>
     </div>
 
-    <script src="app.js?v=20260512-1"></script>
+    <script type="module" src="src/main.mjs?v=20260514-1"></script>
     <script>
       if ("serviceWorker" in navigator && location.protocol !== "file:") {
         window.addEventListener("load", () => {
@@ -531,7 +550,7 @@
           });
 
           navigator.serviceWorker
-            .register("./service-worker.js?v=20260512-1")
+            .register("./service-worker.js?v=20260514-1")
             .then((registration) => registration.update())
             .catch(() => {});
         });

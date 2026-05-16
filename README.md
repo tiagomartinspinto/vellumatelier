@@ -1,33 +1,31 @@
 # Vellum Atelier
 
-Vellum Atelier is a local-first academic writing web app for thesis chapters, journal articles, proposals, and literature reviews. It is designed to stay OS-agnostic: open it in a browser, use it on whatever machine you have, and sync the project through GitHub when you want cross-device continuity.
+Vellum Atelier is a local-first academic writing web app for long-form research work. It is built for thesis chapters, journal articles, literature reviews, proposals, and source-driven drafting that needs citation support without locking the writer into one operating system or one storage vendor.
 
-## What it does now
+![Vellum Atelier interface preview](docs/images/interface-preview.svg)
 
-- Calm academic writing surface with document title, status, project mode, dark mode, and responsive layout
-- Word-processor controls for block formatting, font family, font size, line spacing, bold, italic, underline, lists, and zoom
-- Multiple drafts, folders, drag-and-drop organization, folder collapse, and deletion controls
-- Local autosave through `localStorage`
-- APA and Harvard citation modes
-- Right-click citation actions inside the editor
-- Citation tokens that stay style-aware when you switch citation mode
-- Automatic bibliography page generation at the end of the document
-- Topic detection with five ranked focus options and visible trigger highlights in the editor
-- Source suggestions, article previews, citation-needed checks, and close-paraphrase warnings
-- Research question tracker and literature review matrix
-- Zotero library search with the official Zotero Web API
-- Google Doc linking
-- `.doc` export
-- GitHub-backed project syncing:
-  - browser sync with a fine-grained GitHub token
-  - optional local sync helper through `sync-server.js`
-- Web app scaffolding with a manifest and service worker when served over HTTP or HTTPS
+## Who it is for
 
-## Run it
+- postgraduate researchers
+- academic writers
+- students working on essays, dissertations, or journal submissions
+- anyone who wants a browser-based writing tool with source suggestions, bibliography support, and GitHub-backed project storage
 
-You can open [`index.html`](./index.html) directly in a browser for the core experience.
+## What it does
 
-For full web-app behavior such as service workers and installability, serve the folder over HTTP:
+- write in a document-style editor with formatting controls
+- manage multiple drafts and folders
+- autosave locally in the browser
+- export a Word-compatible `.doc` file
+- export and import full project backups as `.json`
+- suggest citations and reading based on the current draft
+- generate and maintain a bibliography section automatically
+- search OpenAlex and Zotero for relevant sources
+- keep project snapshots in a GitHub repository
+
+## Run locally
+
+Vellum Atelier is a static web app. Serve the repository over HTTP for the best experience:
 
 ```bash
 python3 -m http.server 4180
@@ -39,44 +37,101 @@ Then open:
 http://127.0.0.1:4180
 ```
 
-## GitHub sync
-
-In the app:
-
-1. Link your GitHub repository
-2. Choose a branch if needed
-3. Either:
-   - add a fine-grained GitHub token with `Contents` access for browser sync across devices
-   - or leave the token blank and run the optional local sync helper
-
-Optional helper:
+The optional GitHub sync helper can run alongside the app:
 
 ```bash
-node sync-server.js
+node server/sync-server.cjs
 ```
 
-The browser sync mode writes the project snapshot to `github-export/project-state.json` in your repository. The optional helper also writes readable exports into `github-export/`.
+## Basic use
 
-## Zotero setup
+1. Open the app in a browser.
+2. Write in the editor and organize drafts in folders.
+3. Use the right-side panels for focus detection, source suggestions, review checks, and revision help.
+4. Export a JSON backup before large changes or device moves.
+5. Connect GitHub if you want repository-backed snapshots.
 
-In the Sources tab:
+## Privacy and Security
 
-1. Choose `User library` or `Group library`
-2. Add the Zotero library ID
-3. Add an API key if the library is private
-4. Search your library by keyword, title, or selected text from the editor
+Vellum Atelier is local-first.
 
-## Notes
+- Drafts are autosaved in your browser using `localStorage`.
+- Browser `localStorage` is not encrypted.
+- GitHub tokens and private Zotero API keys are kept only for the current browser session and are not stored permanently in `localStorage`.
+- Do not use saved project data or temporary tokens on shared or public computers.
+- GitHub sync sends project data to the repository you choose.
+- Zotero search contacts Zotero's API when you search your library.
+- OpenAlex search contacts OpenAlex when you run academic metadata searches.
+- Exported JSON files, Word-compatible exports, and GitHub snapshot files may contain sensitive draft content, notes, references, and project structure.
 
-- Zotero integration uses the official Zotero Web API.
-- The citation engine is much stronger now, but it is still not a full CSL word-processor stack yet.
-- Similarity checking is an academic writing aid, not a formal institutional plagiarism report.
-- When opened as `file://`, the app still works, but service worker features do not.
+### Where data is stored
 
-## Good next steps
+- project autosave: browser `localStorage`
+- temporary GitHub and Zotero secrets: browser `sessionStorage`
+- optional repository snapshot: `github-export/project-state.json` in the linked GitHub repository
+- manual backups: exported `.json` and `.doc` files downloaded by the browser
 
-1. Move storage from `localStorage` to a hosted or user-controlled database layer
-2. Add richer CSL style support beyond APA and Harvard defaults
-3. Add Zotero browsing by collection and recent items
-4. Add DOCX and PDF export with thesis and journal templates
-5. Add collaborative sharing flows for supervisors and co-authors
+## GitHub sync
+
+There are two sync modes:
+
+1. **Browser sync**
+   - add a fine-grained GitHub token with `Contents` access
+   - useful for cross-device pull/push from the browser
+   - token stays only for the current session
+
+2. **Local helper**
+   - run `node server/sync-server.cjs`
+   - useful when you want local Git to commit and push snapshots from this machine
+   - the helper can write files, commit changes, and push them to the configured repository
+
+## Zotero
+
+Zotero support can search either a user library or a group library.
+
+- public libraries: library ID only
+- private libraries: library ID plus API key
+- private API keys remain session-only
+
+## Browser compatibility
+
+Best tested targets for the current prototype:
+
+- latest Chrome
+- latest Edge
+- latest Safari
+- latest Firefox
+
+The app relies on modern browser features such as modules, `contenteditable`, `fetch`, `localStorage`, `sessionStorage`, and service workers. If those features are disabled, some parts of the app will degrade or stop working.
+
+## Keyboard shortcuts
+
+- `Cmd/Ctrl + K` — open quick actions
+- `Escape` — close menus, palette, or context menu
+
+## Project structure
+
+```text
+assets/            Static assets
+docs/              Project docs and screenshots
+server/            Optional local sync helper
+src/               App code and data modules
+styles/            App stylesheet
+github-export/     Snapshot output used by GitHub sync
+index.html         App shell
+service-worker.js  Offline cache layer
+manifest.webmanifest
+```
+
+## Known limitations
+
+- the current Word export is a Word-compatible `.doc`, not a true `.docx`
+- citation formatting is practical rather than fully CSL-complete
+- similarity checks are writing aids, not formal plagiarism reports
+- GitHub sync does not do collaborative merge resolution inside the app yet
+
+## Development notes
+
+- keep privacy-sensitive changes mirrored in `README.md` and `PROJECT_STATUS.md`
+- prefer updating storage and sync code together when changing persistence behavior
+- keep backup/import/export formats versioned for future migration work

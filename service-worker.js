@@ -1,11 +1,15 @@
-const CACHE_NAME = "vellum-atelier-v20260512-1";
+const CACHE_NAME = "vellum-atelier-v20260514-1";
 const APP_SHELL = [
   "./",
   "./index.html",
-  "./styles.css",
-  "./app.js",
+  "./styles/app.css",
+  "./src/main.mjs",
+  "./src/data/reference-data.mjs",
+  "./src/lib/storage.mjs",
+  "./src/lib/reference-utils.mjs",
+  "./src/lib/text-utils.mjs",
   "./manifest.webmanifest",
-  "./icon.svg",
+  "./assets/icon.svg",
 ];
 
 function isAppShellRequest(requestUrl) {
@@ -16,6 +20,7 @@ function isAppShellRequest(requestUrl) {
       requestUrl.pathname.endsWith("/index.html") ||
       requestUrl.pathname.endsWith(".css") ||
       requestUrl.pathname.endsWith(".js") ||
+      requestUrl.pathname.endsWith(".mjs") ||
       requestUrl.pathname.endsWith(".webmanifest") ||
       requestUrl.pathname.endsWith(".svg")
     )

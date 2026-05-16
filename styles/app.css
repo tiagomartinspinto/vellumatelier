@@ -100,6 +100,16 @@ button:hover {
   transform: translateY(-1px);
 }
 
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+.editor:focus-visible,
+.tab:focus-visible {
+  outline: 2px solid rgba(221, 226, 232, 0.9);
+  outline-offset: 2px;
+}
+
 .app-shell {
   display: grid;
   grid-template-columns: 280px minmax(0, 1fr) 360px;
@@ -307,6 +317,11 @@ body[data-theme="day"] .dropdown-menu {
 
 .warning-action {
   color: var(--warning);
+}
+
+.warning-button {
+  color: var(--warning);
+  border-color: rgba(240, 166, 160, 0.28);
 }
 
 .quick-actions {
@@ -583,10 +598,27 @@ body[data-theme="day"] .dropdown-menu {
   font-weight: 700;
 }
 
+#clearLocalDataButton,
+#clearSessionTokensButton {
+  min-height: 34px;
+  width: 100%;
+  padding: 0 10px;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
 #syncState {
   margin: 0;
   color: var(--muted);
   font-size: 0.78rem;
+}
+
+.backup-note {
+  margin-top: 2px;
+}
+
+.backup-note[data-tone="warning"] {
+  color: var(--warning);
 }
 
 .sync-summary {
@@ -775,6 +807,7 @@ body[data-theme="day"] .dropdown-menu {
 }
 
 .plan-form textarea:focus,
+.plan-form select:focus,
 .matrix-row input:focus,
 .matrix-row textarea:focus {
   border-color: rgba(226, 229, 232, 0.45);

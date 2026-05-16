@@ -1,3 +1,14 @@
-.phd-writer-sync.json
+.env
+.env.*
+*.log
 node_modules/
 .DS_Store
+github-export/*
+!github-export/.gitkeep
+!github-export/README.md
+.vellum-atelier-sync.json
+.phd-writer-sync.json
+dist/
+build/
+.eslintcache
+coverage/

@@ -3,17 +3,41 @@ const fs = require("fs");
 const path = require("path");
 const { execFile } = require("child_process");
 
-const root = __dirname;
+const root = path.resolve(__dirname, "..");
 const port = 37110;
-const configPath = path.join(root, ".phd-writer-sync.json");
+const configPath = path.join(root, ".vellum-atelier-sync.json");
+const legacyConfigPath = path.join(root, ".phd-writer-sync.json");
 const docsDir = path.join(root, "github-export");
+const allowedOrigins = new Set(["http://127.0.0.1:4180", "http://localhost:4180"]);
 
-function sendJson(res, status, payload) {
-  res.writeHead(status, {
+function corsHeaders(origin = "") {
+  const headers = {
     "Content-Type": "application/json",
-    "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type",
+    Vary: "Origin",
+  };
+
+  if (origin && allowedOrigins.has(origin)) {
+    headers["Access-Control-Allow-Origin"] = origin;
+  }
+
+  return headers;
+}
+
+function rejectOrigin(req, res) {
+  const origin = req.headers.origin || "";
+  if (!origin || allowedOrigins.has(origin)) return false;
+  sendJson(req, res, 403, {
+    ok: false,
+    message: "This sync helper only accepts requests from the local Vellum Atelier app.",
+  });
+  return true;
+}
+
+function sendJson(req, res, status, payload) {
+  res.writeHead(status, {
+    ...corsHeaders(req.headers.origin || ""),
   });
   res.end(JSON.stringify(payload));
 }
@@ -68,7 +92,7 @@ async function ensureGit(repoUrl, branch = "main") {
   try {
     await runGit(["config", "user.email"]);
   } catch {
-    await runGit(["config", "user.email", "phd-writer@example.local"]);
+    await runGit(["config", "user.email", "sync@vellum-atelier.local"]);
   }
 
   try {
@@ -200,7 +224,28 @@ function escapeHtml(value) {
 
 async function commitAndPush(reason, repoUrl, branch = "main") {
   await ensureGit(repoUrl, branch);
-  await runGit(["add", "github-export", "README.md", "index.html", "styles.css", "app.js", "sync-server.js"]);
+  await runGit([
+    "add",
+    "-f",
+    "github-export",
+    "README.md",
+    "index.html",
+    "manifest.webmanifest",
+    "service-worker.js",
+    "assets",
+    "styles",
+    "src",
+    "server",
+    "tests",
+    "scripts",
+    "package.json",
+    "eslint.config.mjs",
+    ".prettierrc.json",
+    ".github",
+    "CHANGELOG.md",
+    "CONTRIBUTING.md",
+    "docs",
+  ]);
 
   const status = await runGit(["status", "--porcelain"]);
   if (!status.trim()) {
@@ -252,9 +297,31 @@ function normalizeRepoUrl(repoUrl = "") {
   return httpsGithubToSsh(repoUrl) || repoUrl;
 }
 
+function readConfig() {
+  if (!fs.existsSync(configPath) && fs.existsSync(legacyConfigPath)) {
+    const legacy = fs.readFileSync(legacyConfigPath, "utf8");
+    fs.writeFileSync(configPath, legacy);
+    fs.rmSync(legacyConfigPath, { force: true });
+  }
+
+  if (!fs.existsSync(configPath)) {
+    return {};
+  }
+
+  try {
+    return JSON.parse(fs.readFileSync(configPath, "utf8"));
+  } catch {
+    return {};
+  }
+}
+
 const server = http.createServer(async (req, res) => {
+  if (rejectOrigin(req, res)) {
+    return;
+  }
+
   if (req.method === "OPTIONS") {
-    sendJson(res, 200, { ok: true });
+    sendJson(req, res, 200, { ok: true });
     return;
   }
 
@@ -263,8 +330,9 @@ const server = http.createServer(async (req, res) => {
       const payload = JSON.parse(await readBody(req));
       payload.repoUrl = normalizeRepoUrl(payload.repoUrl);
       fs.writeFileSync(configPath, JSON.stringify(payload, null, 2));
+      fs.rmSync(legacyConfigPath, { force: true });
       await ensureGit(payload.repoUrl, payload.branch || "main");
-      sendJson(res, 200, {
+      sendJson(req, res, 200, {
         ok: true,
         message: "GitHub repository saved. Pushes will run every 110 seconds.",
       });
@@ -273,23 +341,19 @@ const server = http.createServer(async (req, res) => {
 
     if (req.method === "POST" && req.url === "/api/snapshot") {
       const payload = JSON.parse(await readBody(req));
-      const config = fs.existsSync(configPath)
-        ? JSON.parse(fs.readFileSync(configPath, "utf8"))
-        : {};
+      const config = readConfig();
       const repoUrl = normalizeRepoUrl(payload.repoUrl || config.repoUrl);
       const branch = payload.branch || config.branch || "main";
 
       writeSnapshot(payload);
       const message = await commitAndPush(payload.reason || "auto", repoUrl, branch);
-      sendJson(res, 200, { ok: true, message });
+      sendJson(req, res, 200, { ok: true, message });
       return;
     }
 
     if (req.method === "POST" && req.url === "/api/pull") {
       const payload = JSON.parse(await readBody(req));
-      const config = fs.existsSync(configPath)
-        ? JSON.parse(fs.readFileSync(configPath, "utf8"))
-        : {};
+      const config = readConfig();
       const repoUrl = normalizeRepoUrl(payload.repoUrl || config.repoUrl);
       const branch = payload.branch || config.branch || "main";
 
@@ -298,14 +362,14 @@ const server = http.createServer(async (req, res) => {
         const activeBranch = (await runGit(["branch", "--show-current"])).trim() || branch;
         await runGit(["pull", "--ff-only", "origin", activeBranch]);
       } catch (error) {
-        sendJson(res, 200, {
+        sendJson(req, res, 200, {
           ok: false,
           message: `Pull failed: ${friendlyGitPushError(error.output || error.message, repoUrl)}`,
         });
         return;
       }
 
-      sendJson(res, 200, {
+      sendJson(req, res, 200, {
         ok: true,
         message: "Pulled latest GitHub snapshot.",
         snapshot: readSnapshot(),
@@ -313,9 +377,9 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
-    sendJson(res, 404, { ok: false, message: "Not found" });
+    sendJson(req, res, 404, { ok: false, message: "Not found" });
   } catch (error) {
-    sendJson(res, 500, {
+    sendJson(req, res, 500, {
       ok: false,
       message: error.output || error.message || "Sync failed",
     });

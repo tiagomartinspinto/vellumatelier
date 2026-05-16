@@ -1,192 +1,44 @@
-const storageKey = "arted-phd-writer-state-v1";
-const defaultFolderId = "folder-unsorted";
-const defaultGithubBranch = "main";
-const defaultFontFamily = "Times New Roman";
-const defaultFontSize = 12;
-const defaultLineHeight = 2;
-const defaultZoom = 100;
-
-function createDocument(overrides = {}) {
-  return {
-    id: crypto.randomUUID(),
-    title: "Untitled academic draft",
-    style: "apa",
-    status: "Draft",
-    content: "",
-    references: [],
-    manualReferences: [],
-    folderId: defaultFolderId,
-    fontFamily: defaultFontFamily,
-    fontSize: defaultFontSize,
-    lineHeight: defaultLineHeight,
-    zoom: defaultZoom,
-    updatedAt: Date.now(),
-    ...overrides,
-  };
-}
-
-const starterDocuments = [
-  createDocument({
-    title: "Thesis chapter draft",
-    content: `<h2>Introduction</h2><p>Art education can be understood as a site where visual culture, identity, and critical pedagogy meet. This chapter examines how reflective practice can support students in connecting personal meaning with broader social questions.</p><p>The central argument is that socially engaged art education requires more than skill development; it requires attention to voice, context, materiality, and the ethical conditions of participation.</p>`,
-  }),
-  createDocument({
-    title: "Article idea",
-    content: `<h2>Abstract</h2><p>This article explores how museum education can support dialogic learning through participatory art practices. It considers the relationship between interpretation, embodiment, and critical reflection.</p>`,
-    updatedAt: Date.now() - 60000,
-  }),
-];
-
-const referenceCorpus = [
-  {
-    id: "freire-1970",
-    title: "Pedagogy of the Oppressed",
-    authors: ["Paulo Freire"],
-    year: 1970,
-    source: "Foundational book",
-    topics: ["critical pedagogy", "education", "participation", "dialogue"],
-    abstract:
-      "A foundational account of dialogic education, conscientization, and critique of banking models of learning.",
-    url: "https://www.worldcat.org/search?q=Pedagogy+of+the+Oppressed+Paulo+Freire",
-  },
-  {
-    id: "hooks-1994",
-    title: "Teaching to Transgress: Education as the Practice of Freedom",
-    authors: ["bell hooks"],
-    year: 1994,
-    source: "Foundational book",
-    topics: ["critical pedagogy", "feminist pedagogy", "voice", "classroom"],
-    abstract:
-      "Connects liberatory pedagogy, lived experience, and the classroom as a space of critical possibility.",
-    url: "https://www.worldcat.org/search?q=Teaching+to+Transgress+bell+hooks",
-  },
-  {
-    id: "duncum-2002",
-    title: "Visual Culture Art Education: Why, What and How",
-    authors: ["Paul Duncum"],
-    year: 2002,
-    source: "International Journal of Art & Design Education",
-    topics: ["visual culture", "art education", "curriculum", "media"],
-    abstract:
-      "Argues for art education that engages everyday visual culture and the social meanings of images.",
-    url: "https://scholar.google.com/scholar?q=Visual+Culture+Art+Education+Why+What+and+How+Duncum",
-  },
-  {
-    id: "irwin-2004",
-    title: "A/r/tography: Rendering Self Through Arts-Based Living Inquiry",
-    authors: ["Rita L. Irwin", "Alex de Cosson"],
-    year: 2004,
-    source: "Arts-based research",
-    topics: ["a/r/tography", "arts-based research", "practice-led research", "identity"],
-    abstract:
-      "Frames artistic, research, and teaching practices as entangled modes of inquiry.",
-    url: "https://scholar.google.com/scholar?q=A%2Fr%2Ftography+Rendering+Self+Through+Arts-Based+Living+Inquiry",
-  },
-  {
-    id: "barone-eisner-2012",
-    title: "Arts Based Research",
-    authors: ["Tom Barone", "Elliot W. Eisner"],
-    year: 2012,
-    source: "Research methods book",
-    topics: ["arts-based research", "methodology", "qualitative research", "representation"],
-    abstract:
-      "Explores arts-based research as a way of representing, interpreting, and communicating human experience.",
-    url: "https://www.worldcat.org/search?q=Arts+Based+Research+Barone+Eisner",
-  },
-  {
-    id: "bishop-2012",
-    title: "Artificial Hells: Participatory Art and the Politics of Spectatorship",
-    authors: ["Claire Bishop"],
-    year: 2012,
-    source: "Art theory book",
-    topics: ["participatory art", "socially engaged art", "spectatorship", "community"],
-    abstract:
-      "Critically examines participation, authorship, and political claims in socially engaged art.",
-    url: "https://www.worldcat.org/search?q=Artificial+Hells+Claire+Bishop",
-  },
-  {
-    id: "kester-2004",
-    title: "Conversation Pieces: Community and Communication in Modern Art",
-    authors: ["Grant H. Kester"],
-    year: 2004,
-    source: "Art theory book",
-    topics: ["dialogue", "socially engaged art", "community art", "participation"],
-    abstract:
-      "Develops dialogical aesthetics as a framework for socially engaged and community-based art practices.",
-    url: "https://www.worldcat.org/search?q=Conversation+Pieces+Grant+Kester",
-  },
-  {
-    id: "hein-1998",
-    title: "Learning in the Museum",
-    authors: ["George E. Hein"],
-    year: 1998,
-    source: "Museum education book",
-    topics: ["museum education", "constructivism", "learning", "interpretation"],
-    abstract:
-      "Applies constructivist learning theory to museum education, interpretation, and visitor experience.",
-    url: "https://www.worldcat.org/search?q=Learning+in+the+Museum+George+Hein",
-  },
-  {
-    id: "dewey-1934",
-    title: "Art as Experience",
-    authors: ["John Dewey"],
-    year: 1934,
-    source: "Foundational book",
-    topics: ["aesthetic experience", "experience", "education", "democracy"],
-    abstract:
-      "A foundational account of art, experience, perception, and the continuity between art and life.",
-    url: "https://www.worldcat.org/search?q=Art+as+Experience+John+Dewey",
-  },
-  {
-    id: "springgay-2008",
-    title: "Being with A/r/tography",
-    authors: ["Stephanie Springgay", "Rita L. Irwin", "Sylvia Wilson Kind"],
-    year: 2008,
-    source: "Arts-based research article",
-    topics: ["a/r/tography", "embodiment", "relationality", "arts-based research"],
-    abstract:
-      "Discusses relational, embodied, and living inquiry dimensions of a/r/tographic research.",
-    url: "https://scholar.google.com/scholar?q=Being+with+A%2Fr%2Ftography+Springgay+Irwin+Kind",
-  },
-];
-
-const typoMap = {
-  aslo: "also",
-  det4cts: "detects",
-  depdening: "depending",
-  writeing: "writing",
-  reuqest: "request",
-  rephracser: "rephraser",
-  incldued: "included",
-  soruces: "sources",
-  seperate: "separate",
-  recieve: "receive",
-  teh: "the",
-  thier: "their",
-  becuase: "because",
-};
-
-const topicKeywords = [
-  "art education",
-  "visual culture",
-  "critical pedagogy",
-  "museum education",
-  "a/r/tography",
-  "arts-based research",
-  "practice-led research",
-  "participatory art",
-  "socially engaged art",
-  "feminist pedagogy",
-  "decolonial",
-  "embodiment",
-  "reflective practice",
-  "teacher education",
-  "aesthetic experience",
-  "community art",
-  "dialogue",
-  "identity",
-  "curriculum",
-];
+import { referenceCorpus, topicKeywords, typoMap } from "./data/reference-data.mjs";
+import {
+  APP_VERSION,
+  STORAGE_SCHEMA_VERSION,
+  buildProjectExport,
+  clampZoom,
+  clearSessionSecrets,
+  clearPersistedState,
+  createDefaultState,
+  createDocument,
+  defaultFolderId,
+  defaultFontFamily,
+  defaultFontSize,
+  defaultGithubBranch,
+  defaultLineHeight,
+  defaultZoom,
+  getLastStorageIssue,
+  loadState,
+  normalizeState,
+  parseProjectImport,
+  persistState,
+} from "./lib/storage.mjs";
+import {
+  detectTopic,
+  focusScores,
+  initialsFromAuthor,
+  referenceAuthors,
+  referenceYear,
+  surnameFromAuthor,
+  tokenize,
+  weightedOverlap,
+} from "./lib/reference-utils.mjs";
+import {
+  countWords,
+  escapeAttribute,
+  escapeHtml,
+  escapeRegExp,
+  slugify,
+  stripHtml,
+  stripTags,
+} from "./lib/text-utils.mjs";
 
 let state = loadState();
 let activeId = state.activeId || state.documents[0].id;
@@ -204,6 +56,15 @@ let lastGithubPushSignature = "";
 let contextCitationToken = null;
 const referenceTokenCache = new Map();
 const githubSyncEndpoint = "http://127.0.0.1:37110/api";
+const AUTOSAVE_DELAY_MS = 220;
+const ANALYSIS_DEBOUNCE_MS = 180;
+const FOCUS_HIGHLIGHT_DELAY_MS = 250;
+const LIVE_SEARCH_DELAY_MS = 1500;
+const GITHUB_AUTO_PUSH_INTERVAL_MS = 110_000;
+const ONLINE_SEARCH_FALLBACK_DELAY_MS = 1_200;
+const INPUT_EXPORT_VERSION = `${APP_VERSION} / schema ${STORAGE_SCHEMA_VERSION}`;
+const detectTopicForText = (text) => detectTopic(text, topicKeywords, referenceCorpus);
+const focusScoresForText = (text) => focusScores(text, topicKeywords, referenceCorpus);
 
 const els = {
   documentList: document.querySelector("#documentList"),
@@ -272,103 +133,16 @@ const els = {
   rewriteModeSelect: document.querySelector("#rewriteModeSelect"),
   runRewriteButton: document.querySelector("#runRewriteButton"),
   rewriteOutput: document.querySelector("#rewriteOutput"),
+  backupMessage: document.querySelector("#backupMessage"),
+  exportProjectButton: document.querySelector("#exportProjectButton"),
+  importProjectButton: document.querySelector("#importProjectButton"),
+  clearLocalDataButton: document.querySelector("#clearLocalDataButton"),
+  clearSessionTokensButton: document.querySelector("#clearSessionTokensButton"),
+  importFileInput: document.querySelector("#importFileInput"),
 };
 
-function loadState() {
-  const saved = localStorage.getItem(storageKey);
-  if (!saved) {
-    return normalizeState({
-      documents: starterDocuments,
-      activeId: starterDocuments[0].id,
-      customReferences: {},
-    });
-  }
-
-  try {
-    const parsed = JSON.parse(saved);
-    if (!Array.isArray(parsed.documents) || parsed.documents.length === 0) {
-      throw new Error("Invalid document list");
-    }
-    parsed.customReferences = parsed.customReferences || {};
-    return normalizeState(parsed);
-  } catch {
-    return normalizeState({
-      documents: starterDocuments,
-      activeId: starterDocuments[0].id,
-      customReferences: {},
-    });
-  }
-}
-
-function normalizeState(value) {
-  const folders = Array.isArray(value.folders) && value.folders.length
-    ? value.folders
-    : [{ id: defaultFolderId, name: "Unsorted", createdAt: Date.now() }];
-
-  const folderIds = new Set(folders.map((folder) => folder.id));
-  const documents = value.documents.map((doc) => ({
-    ...createDocument(doc),
-    ...(() => {
-      const fontFamily = doc.fontFamily || defaultFontFamily;
-      const fontSize = Number(doc.fontSize) || defaultFontSize;
-      const lineHeight = Number(doc.lineHeight) || defaultLineHeight;
-      const useAcademicDefaults =
-        !doc.formattingPresetVersion &&
-        fontFamily === "Georgia" &&
-        fontSize === 14 &&
-        lineHeight === 1.75;
-      return {
-        fontFamily: useAcademicDefaults ? defaultFontFamily : fontFamily,
-        fontSize: useAcademicDefaults ? defaultFontSize : fontSize,
-        lineHeight: useAcademicDefaults ? defaultLineHeight : lineHeight,
-        formattingPresetVersion: 2,
-      };
-    })(),
-    folderId: folderIds.has(doc.folderId) ? doc.folderId : defaultFolderId,
-    status: doc.status || "Draft",
-    manualReferences: Array.isArray(doc.manualReferences) ? doc.manualReferences : [],
-    zoom: clampZoom(Number(doc.zoom) || defaultZoom),
-  }));
-
-  return {
-    ...value,
-    folders,
-    documents,
-    project: {
-      mode: "thesis",
-      researchQuestion: "",
-      subQuestions: "",
-      methodology: "",
-      contribution: "",
-      ...(value.project || {}),
-    },
-    theme: value.theme || "night",
-    literatureMatrix: Array.isArray(value.literatureMatrix) ? value.literatureMatrix : [],
-    githubRepoUrl: value.githubRepoUrl || "",
-    githubBranch: value.githubBranch || defaultGithubBranch,
-    githubToken: value.githubToken || "",
-    githubLastSyncAt: value.githubLastSyncAt || "",
-    githubLastAction: value.githubLastAction || "",
-    ui: {
-      focusMode: false,
-      ...(value.ui || {}),
-    },
-    zotero: {
-      libraryType: "users",
-      libraryId: "",
-      apiKey: "",
-      searchQuery: "",
-      ...(value.zotero || {}),
-    },
-    activeId: documents.some((doc) => doc.id === value.activeId)
-      ? value.activeId
-      : documents[0]?.id,
-    customReferences: value.customReferences || {},
-  };
-}
-
 function persist() {
-  localStorage.setItem(storageKey, JSON.stringify({ ...state, activeId }));
+  persistState(state, activeId);
   els.syncState.textContent = `Saved locally at ${new Date().toLocaleTimeString([], {
     hour: "2-digit",
     minute: "2-digit",
@@ -383,7 +157,7 @@ function schedulePersist() {
   persistTimer = setTimeout(() => {
     persistTimer = null;
     persist();
-  }, 220);
+  }, AUTOSAVE_DELAY_MS);
 }
 
 function flushPersist() {
@@ -398,6 +172,14 @@ function activeDocument() {
   return state.documents.find((doc) => doc.id === activeId) || state.documents[0];
 }
 
+function syncFieldValue(element, value) {
+  if (!element) return;
+  if (document.activeElement === element) return;
+  if (element.value !== value) {
+    element.value = value;
+  }
+}
+
 function renderDocuments() {
   els.documentList.innerHTML = "";
   state.folders.forEach((folder) => {
@@ -408,7 +190,7 @@ function renderDocuments() {
       <div class="folder-header">
         <button class="folder-name" type="button" data-folder-toggle="${escapeHtml(folder.id)}">${escapeHtml(folder.name)}</button>
         <span class="folder-count">${documentsInFolder(folder.id).length}</span>
-        <button class="delete-button" type="button" data-delete-folder="${escapeHtml(folder.id)}" title="Delete folder">×</button>
+        <button class="delete-button" type="button" data-delete-folder="${escapeHtml(folder.id)}" title="Delete folder" aria-label="Delete folder ${escapeAttribute(folder.name)}">×</button>
       </div>
       <div class="folder-documents" ${folder.collapsed ? "hidden" : ""}></div>
     `;
@@ -454,7 +236,7 @@ function documentButton(doc) {
       <span>${countWords(stripHtml(doc.content))} words</span>
       <span class="status-badge">${escapeHtml(doc.status || "Draft")}</span>
     </button>
-    <button class="delete-button" type="button" data-delete-document="${escapeHtml(doc.id)}" title="Delete document">×</button>
+    <button class="delete-button" type="button" data-delete-document="${escapeHtml(doc.id)}" title="Delete document" aria-label="Delete document ${escapeAttribute(doc.title || "Untitled")}">×</button>
   `;
   row.addEventListener("dragstart", (event) => {
     event.dataTransfer.setData("text/plain", doc.id);
@@ -535,12 +317,12 @@ function renderProjectPlan() {
   if (!els.researchQuestionInput) return;
   const project = state.project || {};
   if (els.projectMode) {
-    els.projectMode.value = project.mode || "thesis";
+    syncFieldValue(els.projectMode, project.mode || "thesis");
   }
-  els.researchQuestionInput.value = project.researchQuestion || "";
-  els.subQuestionsInput.value = project.subQuestions || "";
-  els.methodologyInput.value = project.methodology || "";
-  els.contributionInput.value = project.contribution || "";
+  syncFieldValue(els.researchQuestionInput, project.researchQuestion || "");
+  syncFieldValue(els.subQuestionsInput, project.subQuestions || "");
+  syncFieldValue(els.methodologyInput, project.methodology || "");
+  syncFieldValue(els.contributionInput, project.contribution || "");
   renderLiteratureMatrix();
 }
 
@@ -574,7 +356,7 @@ function renderLiteratureMatrix() {
           <label>Method<input data-lit-field="method" value="${escapeAttribute(row.method || "")}" placeholder="Methodology" /></label>
           <label>Finding<textarea data-lit-field="finding" placeholder="Main finding">${escapeHtml(row.finding || "")}</textarea></label>
           <label>Relevance<textarea data-lit-field="relevance" placeholder="Why it matters">${escapeHtml(row.relevance || "")}</textarea></label>
-          <button class="delete-button" type="button" data-delete-lit="${escapeHtml(row.id)}">×</button>
+          <button class="delete-button" type="button" data-delete-lit="${escapeHtml(row.id)}" aria-label="Delete literature matrix row">×</button>
         </article>
       `,
     )
@@ -606,10 +388,6 @@ function deleteLiteratureRow(rowId) {
   state.literatureMatrix = state.literatureMatrix.filter((item) => item.id !== rowId);
   persist();
   renderLiteratureMatrix();
-}
-
-function clampZoom(value) {
-  return Math.min(170, Math.max(70, Math.round(value || defaultZoom)));
 }
 
 function fontStack(value) {
@@ -693,12 +471,12 @@ function renderFocusMode() {
 
 function renderEditor() {
   const doc = activeDocument();
-  els.docTitle.value = doc.title;
-  els.docStatus.value = doc.status || "Draft";
+  syncFieldValue(els.docTitle, doc.title);
+  syncFieldValue(els.docStatus, doc.status || "Draft");
   if (els.projectMode) {
-    els.projectMode.value = state.project?.mode || "thesis";
+    syncFieldValue(els.projectMode, state.project?.mode || "thesis");
   }
-  if (els.citationStyleSelect) els.citationStyleSelect.value = doc.style || "apa";
+  syncFieldValue(els.citationStyleSelect, doc.style || "apa");
   els.editor.innerHTML = doc.content;
   ensureHeadingAnchors();
   applyDocumentAppearance(doc);
@@ -745,12 +523,12 @@ function saveCurrentDocument() {
 
 function renderGithubState() {
   if (!els.githubRepoInput || !els.githubSyncMessage) return;
-  els.githubRepoInput.value = state.githubRepoUrl || "";
+  syncFieldValue(els.githubRepoInput, state.githubRepoUrl || "");
   if (els.githubBranchInput) {
-    els.githubBranchInput.value = state.githubBranch || defaultGithubBranch;
+    syncFieldValue(els.githubBranchInput, state.githubBranch || defaultGithubBranch);
   }
   if (els.githubTokenInput) {
-    els.githubTokenInput.value = state.githubToken || "";
+    syncFieldValue(els.githubTokenInput, state.githubToken || "");
   }
   const syncMode = state.githubToken ? "Browser sync" : "Local helper";
   const linked = Boolean(state.githubRepoUrl);
@@ -771,9 +549,9 @@ function renderGithubState() {
   }
   els.githubSyncMessage.textContent = linked
     ? state.githubToken
-      ? "This draft can now push and pull through GitHub directly in the browser."
+      ? "This draft can now push and pull through GitHub directly in the browser. The token stays only in this session."
       : "This draft can use the optional local helper for automatic pushes every 110 seconds."
-    : "Link a private repository. Add a token for browser sync across devices, or use the optional local sync helper.";
+    : "Link a private repository. Add a token for browser sync across devices, or use the optional local sync helper. Tokens are not saved permanently.";
   if (els.githubButton) {
     els.githubButton.textContent = linked ? "GitHub settings" : "Connect GitHub";
   }
@@ -782,15 +560,15 @@ function renderGithubState() {
 function renderZoteroState() {
   if (!els.zoteroLibraryType) return;
   const zotero = state.zotero || {};
-  els.zoteroLibraryType.value = zotero.libraryType || "users";
-  els.zoteroLibraryId.value = zotero.libraryId || "";
-  els.zoteroApiKey.value = zotero.apiKey || "";
-  els.zoteroSearchInput.value = zotero.searchQuery || "";
+  syncFieldValue(els.zoteroLibraryType, zotero.libraryType || "users");
+  syncFieldValue(els.zoteroLibraryId, zotero.libraryId || "");
+  syncFieldValue(els.zoteroApiKey, zotero.apiKey || "");
+  syncFieldValue(els.zoteroSearchInput, zotero.searchQuery || "");
   els.zoteroStatus.textContent = zotero.libraryId
     ? zotero.apiKey
-      ? "Connected to a private Zotero library."
+      ? "Connected to a private Zotero library for this session."
       : "Connected to a public Zotero library."
-    : "Connect a public library with its user or group ID, or add an API key for a private library.";
+    : "Connect a public library with its user or group ID, or add an API key for a private library. Private keys are session-only.";
 }
 
 function renderTheme() {
@@ -830,6 +608,12 @@ function toggleTheme() {
   state.theme = state.theme === "day" ? "night" : "day";
   renderTheme();
   persist();
+}
+
+function setBackupMessage(message, tone = "") {
+  if (!els.backupMessage) return;
+  els.backupMessage.textContent = message;
+  els.backupMessage.dataset.tone = tone;
 }
 
 function setGithubStatus(message) {
@@ -882,6 +666,18 @@ function clearGithubRepo() {
   setGithubStatus("GitHub connection removed from this browser.");
 }
 
+function clearSessionOnlyTokens() {
+  state.githubToken = "";
+  if (state.zotero) {
+    state.zotero.apiKey = "";
+  }
+  clearSessionSecrets();
+  persist();
+  renderGithubState();
+  renderZoteroState();
+  setBackupMessage("Session tokens cleared from this browser session.");
+}
+
 function toggleFocusMode() {
   state.ui.focusMode = !state.ui.focusMode;
   renderFocusMode();
@@ -900,7 +696,7 @@ function scheduleEditorAnalysis() {
     renderSelectionCitations();
     scheduleFocusHighlights();
     scheduleLiveAcademicSearch();
-  }, 180);
+  }, ANALYSIS_DEBOUNCE_MS);
 }
 
 function createNewDocument() {
@@ -1039,7 +835,7 @@ function scheduleGithubSnapshots() {
   if (!state.githubRepoUrl) return;
   githubSnapshotTimer = setInterval(() => {
     sendGithubSnapshot("auto");
-  }, 110000);
+  }, GITHUB_AUTO_PUSH_INTERVAL_MS);
 }
 
 function githubPayload(reason = "auto") {
@@ -1053,7 +849,10 @@ function githubPayload(reason = "auto") {
     project: state.project,
     literatureMatrix: state.literatureMatrix,
     theme: state.theme,
-    zotero: state.zotero,
+    zotero: {
+      ...(state.zotero || {}),
+      apiKey: "",
+    },
     documents: state.documents.map((doc) => ({
       ...doc,
       plainText: stripHtml(doc.content),
@@ -1148,7 +947,7 @@ async function sendGithubConfig() {
     const result = await response.json();
     setGithubStatus(result.message || "GitHub repository linked.");
   } catch {
-    setGithubStatus("GitHub helper is not running. Start it with: node sync-server.js");
+    setGithubStatus("GitHub helper is not running. Start it with: node server/sync-server.cjs");
   }
 }
 
@@ -1248,7 +1047,7 @@ async function sendGithubSnapshotViaApi(payload) {
     branch: state.githubBranch || defaultGithubBranch,
     committer: {
       name: "Vellum Atelier",
-      email: "phd-writer@example.local",
+      email: "sync@vellum-atelier.local",
     },
   };
   if (sha) body.sha = sha;
@@ -1301,16 +1100,15 @@ function githubSyncFailureMessage(error) {
 
 function applyGithubSnapshot(snapshot) {
   if (!snapshot.documents?.length) return;
-  state.folders = snapshot.folders || state.folders;
-  state.documents = snapshot.documents.map((doc) => createDocument(doc));
-  state.project = snapshot.project || state.project;
-  state.literatureMatrix = snapshot.literatureMatrix || state.literatureMatrix;
-  state.theme = snapshot.theme || state.theme;
-  state.zotero = snapshot.zotero || state.zotero;
-  activeId = snapshot.activeId && state.documents.some((doc) => doc.id === snapshot.activeId)
-    ? snapshot.activeId
+  const sessionGithubToken = state.githubToken || "";
+  const sessionZoteroApiKey = state.zotero?.apiKey || "";
+  state = normalizeState(snapshot);
+  state.githubToken = sessionGithubToken;
+  state.zotero.apiKey = sessionZoteroApiKey;
+  activeId = state.activeId && state.documents.some((doc) => doc.id === state.activeId)
+    ? state.activeId
     : state.documents[0].id;
-  lastGithubPushSignature = githubSnapshotSignature(snapshot);
+  lastGithubPushSignature = githubSnapshotSignature(githubPayload("pull"));
   persist();
   renderApp();
   renderTheme();
@@ -1320,23 +1118,13 @@ function textFromEditor() {
   return els.editor.innerText.replace(/\u00a0/g, " ").trim();
 }
 
-function stripHtml(html) {
-  const div = document.createElement("div");
-  div.innerHTML = html;
-  return div.innerText || "";
-}
-
-function countWords(text) {
-  return (text.match(/\b[\w'-]+\b/g) || []).length;
-}
-
 function updateMetrics() {
   const text = textFromEditor();
   const words = countWords(text);
   const citations = els.editor.querySelectorAll(".citation-token").length
     ? Array.from(els.editor.querySelectorAll(".citation-token"))
     : text.match(/\([A-Z][A-Za-z-]+(?: et al\.)?, \d{4}\)/g) || [];
-  const topic = detectTopic(text);
+  const topic = detectTopicForText(text);
 
   els.wordCount.textContent = String(words);
   els.charCount.textContent = String(text.length);
@@ -1363,60 +1151,8 @@ function currentParagraphText() {
   return paragraphs.at(-1) || "";
 }
 
-function detectTopic(text) {
-  const scored = focusScores(text);
-
-  return scored[0]?.score > 0 ? scored[0].topic : "";
-}
-
-function focusScores(text) {
-  const lower = text.toLowerCase();
-  const rawScores = topicKeywords
-    .map((topic) => {
-      const words = topic.split(/\s+/);
-      const triggers = [];
-      let score = 0;
-
-      if (lower.includes(topic)) {
-        score += 7;
-        triggers.push(topic);
-      }
-
-      words.forEach((word) => {
-        if (word.length > 3 && lower.includes(word)) {
-          score += word.length > 6 ? 3 : 1;
-          triggers.push(word);
-        }
-      });
-
-      referenceCorpus.forEach((ref) => {
-        if (ref.topics.includes(topic)) {
-          ref.topics.forEach((refTopic) => {
-            if (lower.includes(refTopic)) {
-              score += 2;
-              triggers.push(refTopic);
-            }
-          });
-        }
-      });
-
-      return {
-        topic,
-        score,
-        triggers: Array.from(new Set(triggers)).slice(0, 5),
-      };
-    })
-    .sort((a, b) => b.score - a.score);
-
-  const total = rawScores.reduce((sum, item) => sum + item.score, 0);
-  return rawScores.slice(0, 5).map((item) => ({
-    ...item,
-    percentage: total ? Math.round((item.score / total) * 100) : 0,
-  }));
-}
-
 function renderFocusOptions(text) {
-  const options = focusScores(text);
+  const options = focusScoresForText(text);
   els.focusOptions.innerHTML = options
     .map((option) => {
       const triggerText = option.triggers.length
@@ -1440,12 +1176,12 @@ function renderFocusOptions(text) {
 
 function scheduleFocusHighlights() {
   clearTimeout(highlightTimer);
-  highlightTimer = setTimeout(applyFocusHighlights, 250);
+  highlightTimer = setTimeout(applyFocusHighlights, FOCUS_HIGHLIGHT_DELAY_MS);
 }
 
 function applyFocusHighlights() {
   const text = textFromEditor();
-  const terms = focusScores(text)
+  const terms = focusScoresForText(text)
     .filter((option) => option.score > 0)
     .flatMap((option) => option.triggers)
     .filter((term) => term.length > 4)
@@ -1559,21 +1295,9 @@ function restoreCaretOffset(offset) {
   }
 }
 
-function escapeRegExp(value) {
-  return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-
-function slugify(value) {
-  return String(value || "section")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 40) || "section";
-}
-
 function suggestedReferences() {
   const text = textFromEditor().toLowerCase();
-  const topic = detectTopic(text);
+  const topic = detectTopicForText(text);
   return referenceCorpus
     .map((ref) => {
       const topicScore = ref.topics.reduce((sum, item) => {
@@ -1605,7 +1329,7 @@ function renderReferences(list = suggestedReferences()) {
   els.referenceList.innerHTML = "";
   if (list.length === 0) {
     els.referenceList.innerHTML =
-      '<div class="reference-card"><h3>No suggestions yet</h3><p>Write a few sentences about your topic and I will suggest art education references.</p></div>';
+      '<div class="reference-card"><h3>No suggestions yet</h3><p>Write a few sentences about your topic and I will suggest relevant academic sources.</p></div>';
     return;
   }
 
@@ -1625,43 +1349,6 @@ function renderReferences(list = suggestedReferences()) {
     `;
     els.referenceList.appendChild(card);
   });
-}
-
-function referenceAuthors(ref) {
-  if (Array.isArray(ref.authors) && ref.authors.length) return ref.authors;
-  if (Array.isArray(ref.creators) && ref.creators.length) {
-    return ref.creators
-      .map((creator) => {
-        if (creator.name) return creator.name;
-        return [creator.firstName, creator.lastName].filter(Boolean).join(" ").trim();
-      })
-      .filter(Boolean);
-  }
-  return ["Unknown"];
-}
-
-function surnameFromAuthor(author) {
-  const text = String(author || "").trim();
-  if (!text) return "Unknown";
-  if (text.includes(",")) return text.split(",")[0].trim();
-  return text.split(/\s+/).at(-1) || text;
-}
-
-function initialsFromAuthor(author) {
-  const text = String(author || "").trim();
-  const [firstPart, secondPart] = text.includes(",")
-    ? text.split(",").map((part) => part.trim())
-    : [surnameFromAuthor(text), text.split(/\s+/).slice(0, -1).join(" ")];
-  const initials = String(secondPart || "")
-    .split(/\s+/)
-    .filter(Boolean)
-    .map((part) => `${part.charAt(0).toUpperCase()}.`)
-    .join(" ");
-  return initials ? `${firstPart}, ${initials}` : firstPart;
-}
-
-function referenceYear(ref) {
-  return String(ref.year || ref.date || "n.d.");
 }
 
 function usesNumericCitations(style = activeDocument().style) {
@@ -1704,6 +1391,7 @@ function bibliographyText(ref, style = activeDocument().style) {
   const year = referenceYear(ref);
   const title = escapeHtml(ref.title || "Untitled");
   const journal = escapeHtml(ref.journal || ref.publicationTitle || ref.source || "");
+  const publisher = escapeHtml(ref.publisher || ref.source || "");
   const volumeIssue = [ref.volume, ref.issue ? `(${ref.issue})` : ""].filter(Boolean).join("");
   const pages = ref.pages ? `, ${escapeHtml(ref.pages)}` : "";
   const link = referenceLink(ref);
@@ -1737,7 +1425,6 @@ function bibliographyText(ref, style = activeDocument().style) {
   const authorText = style === "harvard"
     ? authors.map(initialsFromAuthor).join(" and ")
     : authors.map(initialsFromAuthor).join(", ");
-  const publisher = escapeHtml(ref.publisher || ref.source || "");
 
   if (style === "harvard" || style === "chicago") {
     return `${authorText} ${year}, <em>${title}</em>${publisher ? `. ${publisher}` : ""}${suffix}`;
@@ -1933,7 +1620,7 @@ function renderSourceChecks() {
     cards.push(`
       <article class="check-card warning">
         <h3>Citation suggested for this paragraph</h3>
-        <p>This paragraph discusses ${escapeHtml(detectTopic(paragraph) || "an academic topic")} without an in-text citation. The strongest match is ${escapeHtml(matches[0].ref.title)}.</p>
+        <p>This paragraph discusses ${escapeHtml(detectTopicForText(paragraph) || "an academic topic")} without an in-text citation. The strongest match is ${escapeHtml(matches[0].ref.title)}.</p>
         <div class="reference-actions">
           <button type="button" data-source-cite="${escapeHtml(matches[0].ref.id)}">Insert ${escapeHtml(formatCitation(matches[0].ref))}</button>
           <button type="button" data-source-add="${escapeHtml(matches[0].ref.id)}">Add bibliography</button>
@@ -2032,45 +1719,6 @@ function hasInTextCitation(text) {
   return /\([A-Z][A-Za-z-]+(?: et al\.)?,? \d{4}\)|\([A-Z][A-Za-z-]+ \d{4}\)|\([A-Z][A-Za-z-]+\)|\[\d+\]/.test(text);
 }
 
-const stopWords = new Set([
-  "about",
-  "after",
-  "also",
-  "among",
-  "because",
-  "between",
-  "could",
-  "from",
-  "have",
-  "into",
-  "more",
-  "such",
-  "that",
-  "their",
-  "there",
-  "this",
-  "through",
-  "with",
-  "within",
-  "would",
-  "where",
-  "which",
-  "while",
-]);
-
-function tokenize(text) {
-  return Array.from(
-    new Set(
-      text
-        .toLowerCase()
-        .replace(/[^a-z0-9/ -]/g, " ")
-        .split(/\s+/)
-        .map((word) => word.trim())
-        .filter((word) => word.length > 3 && !stopWords.has(word)),
-    ),
-  );
-}
-
 function cachedReferenceTokens(ref) {
   const signature = [
     ref.id,
@@ -2087,13 +1735,6 @@ function cachedReferenceTokens(ref) {
   const tokens = tokenize(`${ref.title} ${ref.abstract || ""} ${ref.topics?.join(" ") || ""}`);
   referenceTokenCache.set(ref.id, { signature, tokens });
   return tokens;
-}
-
-function weightedOverlap(sourceTokens, refTokens) {
-  const refSet = new Set(refTokens);
-  const shared = sourceTokens.filter((token) => refSet.has(token));
-  const denominator = Math.max(6, Math.min(sourceTokens.length, refTokens.length));
-  return shared.length / denominator;
 }
 
 function runChecks() {
@@ -2273,12 +1914,6 @@ function yearFromDate(value) {
   return match ? match[0] : String(value || "n.d.").slice(0, 4) || "n.d.";
 }
 
-function stripTags(value) {
-  const div = document.createElement("div");
-  div.innerHTML = String(value || "");
-  return div.textContent || "";
-}
-
 function cleanZoteroMarkup(value) {
   return String(value || "")
     .replace(/^<div class="csl-entry">/i, "")
@@ -2408,7 +2043,7 @@ async function searchZotero(query = els.zoteroSearchInput.value.trim() || getSel
 }
 
 async function onlineSearch() {
-  const query = document.querySelector("#referenceSearch").value.trim() || detectTopic(textFromEditor());
+  const query = document.querySelector("#referenceSearch").value.trim() || detectTopicForText(textFromEditor());
   if (!query) return;
 
   els.referenceList.innerHTML =
@@ -2443,13 +2078,13 @@ async function onlineSearch() {
   } catch {
     els.referenceList.innerHTML =
       '<div class="reference-card"><h3>Online search unavailable</h3><p>Your local reference suggestions are still available offline.</p></div>';
-    setTimeout(() => renderReferences(), 1200);
+    setTimeout(() => renderReferences(), ONLINE_SEARCH_FALLBACK_DELAY_MS);
   }
 }
 
 function scheduleLiveAcademicSearch() {
   clearTimeout(liveSearchTimer);
-  liveSearchTimer = setTimeout(liveAcademicSearch, 1500);
+  liveSearchTimer = setTimeout(liveAcademicSearch, LIVE_SEARCH_DELAY_MS);
 }
 
 async function liveAcademicSearch() {
@@ -2479,7 +2114,7 @@ async function liveAcademicSearch() {
       doi: work.doi || "",
       url: work.doi || work.id || "https://openalex.org",
       itemType: "journalArticle",
-      topics: [query, detectTopic(paragraph)].filter(Boolean),
+      topics: [query, detectTopicForText(paragraph)].filter(Boolean),
       abstract: abstractFromOpenAlex(work) || (work.cited_by_count
         ? `Live academic metadata match. Cited by ${work.cited_by_count} works.`
         : "Live academic metadata match."),
@@ -2528,9 +2163,18 @@ function previewFromWork(work) {
 
 function buildLiveSearchQuery(text) {
   if (countWords(text) < 8) return "";
-  const topic = detectTopic(text);
-  if (topic) return `${topic} art education`;
+  const topic = detectTopicForText(text);
+  if (topic) return `${topic} academic research`;
   return tokenize(text).slice(0, 7).join(" ");
+}
+
+function downloadBlob(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(url);
 }
 
 function exportDoc() {
@@ -2538,24 +2182,57 @@ function exportDoc() {
   const doc = activeDocument();
   const html = `<!doctype html><html><head><meta charset="utf-8"><title>${escapeHtml(doc.title)}</title></head><body><h1>${escapeHtml(doc.title)}</h1>${doc.content}</body></html>`;
   const blob = new Blob([html], { type: "application/msword" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = `${doc.title.replace(/[^\w-]+/g, "-").toLowerCase() || "document"}.doc`;
-  link.click();
-  URL.revokeObjectURL(url);
+  downloadBlob(blob, `${doc.title.replace(/[^\w-]+/g, "-").toLowerCase() || "document"}.doc`);
+  setBackupMessage(
+    "Word-compatible export downloaded. Exported files can contain sensitive draft content and references.",
+  );
 }
 
-function escapeHtml(value) {
-  return String(value)
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;");
+function exportProjectJson() {
+  saveCurrentDocument();
+  const payload = buildProjectExport(state, activeId);
+  const stamp = new Date().toISOString().slice(0, 10);
+  downloadBlob(
+    new Blob([payload], { type: "application/json" }),
+    `vellum-atelier-project-${stamp}.json`,
+  );
+  setBackupMessage(
+    `Project JSON exported with ${INPUT_EXPORT_VERSION}. GitHub tokens and private Zotero keys were not included.`,
+  );
 }
 
-function escapeAttribute(value) {
-  return escapeHtml(value).replaceAll("'", "&#39;");
+async function importProjectJson(file) {
+  if (!file) return;
+  try {
+    const text = await file.text();
+    const imported = parseProjectImport(text);
+    if (!confirm("Replace the current workspace with the imported project?")) return;
+    state = normalizeState(imported.state);
+    activeId = state.activeId || state.documents[0]?.id;
+    persist();
+    renderApp();
+    renderTheme();
+    setBackupMessage(
+      `Imported project data from ${imported.metadata.appVersion || "an older version"} successfully.`,
+    );
+  } catch (error) {
+    setBackupMessage(error.message || "The selected JSON file could not be imported.", "warning");
+  } finally {
+    if (els.importFileInput) {
+      els.importFileInput.value = "";
+    }
+  }
+}
+
+function clearLocalDataAndReset() {
+  if (!confirm("Clear this browser's local Vellum Atelier data and reset the workspace?")) return;
+  clearPersistedState();
+  state = createDefaultState();
+  activeId = state.activeId || state.documents[0]?.id;
+  persist();
+  renderApp();
+  renderTheme();
+  setBackupMessage("Local autosave data cleared. A fresh workspace is ready in this browser.");
 }
 
 function activateTab(tabName) {
@@ -2878,6 +2555,13 @@ document.querySelector("#refreshReferencesButton").addEventListener("click", () 
 document.querySelector("#runChecksButton").addEventListener("click", runChecks);
 document.querySelector("#onlineSearchButton").addEventListener("click", onlineSearch);
 document.querySelector("#exportButton").addEventListener("click", exportDoc);
+els.exportProjectButton?.addEventListener("click", exportProjectJson);
+els.importProjectButton?.addEventListener("click", () => els.importFileInput?.click());
+els.clearLocalDataButton?.addEventListener("click", clearLocalDataAndReset);
+els.clearSessionTokensButton?.addEventListener("click", clearSessionOnlyTokens);
+els.importFileInput?.addEventListener("change", (event) => {
+  importProjectJson(event.target.files?.[0] || null);
+});
 document.querySelector("#searchZoteroButton")?.addEventListener("click", () => searchZotero());
 document.querySelector("#useSelectionForSearchButton")?.addEventListener("click", () => {
   const selectedText = getSelectedText();
@@ -3069,3 +2753,8 @@ renderApp();
 renderTheme();
 persist();
 scheduleGithubSnapshots();
+
+const initialStorageIssue = getLastStorageIssue();
+if (initialStorageIssue) {
+  setBackupMessage(initialStorageIssue, "warning");
+}
