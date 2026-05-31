@@ -2,6 +2,9 @@
 
 ## Completed changes
 
+- replaced absolute local paths in this status file with repo-relative paths
+- clarified README language that Vellum Atelier is not an official university service, including at Aalto University, unless separately deployed or approved
+- added a short privacy reminder to check institutional rules before syncing unpublished drafts to GitHub
 - reframed the product for doctoral-level research writing in university contexts
 - expanded starter templates to:
   - dissertation chapter
@@ -37,13 +40,13 @@
 
 ## Files changed
 
-- `/Users/ptiagomp/Desktop/codex projects/myphdwriter/index.html`
-- `/Users/ptiagomp/Desktop/codex projects/myphdwriter/src/main.mjs`
-- `/Users/ptiagomp/Desktop/codex projects/myphdwriter/src/lib/storage.mjs`
-- `/Users/ptiagomp/Desktop/codex projects/myphdwriter/styles/app.css`
-- `/Users/ptiagomp/Desktop/codex projects/myphdwriter/README.md`
-- `/Users/ptiagomp/Desktop/codex projects/myphdwriter/PROJECT_STATUS.md`
-- `/Users/ptiagomp/Desktop/codex projects/myphdwriter/service-worker.js`
+- `index.html`
+- `src/main.mjs`
+- `src/lib/storage.mjs`
+- `styles/app.css`
+- `README.md`
+- `PROJECT_STATUS.md`
+- `service-worker.js`
 
 ## Remaining tasks
 

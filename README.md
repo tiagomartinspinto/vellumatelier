@@ -73,7 +73,7 @@ node server/sync-server.cjs
 
 ## Privacy and institutional use
 
-Vellum Atelier is not an official Aalto University service unless it is separately deployed or approved by the institution.
+Vellum Atelier is not an official university service, including at Aalto University, unless it is separately deployed or approved by the relevant institution.
 
 Vellum Atelier is local-first.
 
@@ -83,6 +83,7 @@ Vellum Atelier is local-first.
 - Do not use saved project data or temporary tokens on shared or public computers.
 - Do not enter confidential, personal, sensitive, unpublished, or restricted research data into third-party APIs unless that use is permitted by your institution and your project conditions.
 - GitHub sync sends project data to the repository you choose.
+- Check your institutional, funder, and project rules before syncing unpublished research drafts to any GitHub repository, including private repositories.
 - Zotero search contacts Zotero's API when you search your library.
 - OpenAlex search contacts OpenAlex when you run academic metadata searches.
 - Exported JSON files, Word-compatible exports, and GitHub snapshot files may contain sensitive draft content, notes, references, and project structure.
