@@ -1,29 +1,29 @@
 # Vellum Atelier
 
-Vellum Atelier is a local-first academic writing web app for long-form research work.
+Vellum Atelier is a local-first academic writing web app designed for doctoral-level research writing in university contexts.
 
-It is designed to feel like a quiet, trustworthy writing studio for thesis chapters, journal articles, literature reviews, and research proposals without locking the writer into one operating system or one storage vendor.
+It aims to feel calm, trustworthy, and practical for long-form research work without locking the writer into one operating system or one storage vendor.
 
 ![Vellum Atelier interface preview](docs/images/interface-preview.svg)
 
-## Who it is for
+## For doctoral researchers
 
-- postgraduate researchers
-- academic writers
-- students working on essays, dissertations, or journal submissions
-- anyone who wants a browser-based writing tool with source suggestions, bibliography support, and GitHub-backed project storage
+- doctoral researchers drafting articles, dissertation chapters, research plans, and literature reviews
+- researchers preparing conference papers, funding outlines, and supervisor meetings
+- academic writers who want local-first drafting with optional source search and repository-backed versioning
 
 ## What it does
 
 - write in a document-style editor with formatting controls
 - manage multiple drafts and folders
 - autosave locally in the browser
-- export a Word-compatible `.doc` file
+- export a Word-compatible `.doc` file with project metadata, abstract structure, and bibliography
 - export and import full project backups as `.json`
 - suggest citations and reading based on the current draft
 - generate and maintain a bibliography section automatically
 - search OpenAlex and Zotero for relevant sources
 - keep project snapshots in a GitHub repository
+- track project metadata, literature matrices, revision tasks, and supervisor notes
 
 ## Local-first by default
 
@@ -63,7 +63,17 @@ node server/sync-server.cjs
 4. Export a JSON backup before large changes or device moves.
 5. Connect GitHub if you want repository-backed snapshots.
 
-## Privacy and Security
+## Suggested PhD workflows
+
+- dissertation chapter drafting with local notes, source tracking, and export
+- journal article drafting with citation support and contribution/method checks
+- literature review work with the built-in matrix for argument, method, evidence, and gap notes
+- research plans and funding outlines with working title, deadline, target venue, and keyword metadata
+- supervisor meetings with notes, questions, revision tasks, and an exportable supervisor copy
+
+## Privacy and institutional use
+
+Vellum Atelier is not an official Aalto University service unless it is separately deployed or approved by the institution.
 
 Vellum Atelier is local-first.
 
@@ -71,6 +81,7 @@ Vellum Atelier is local-first.
 - Browser `localStorage` is not encrypted.
 - GitHub tokens and private Zotero API keys are kept only for the current browser session and are not stored permanently in `localStorage`.
 - Do not use saved project data or temporary tokens on shared or public computers.
+- Do not enter confidential, personal, sensitive, unpublished, or restricted research data into third-party APIs unless that use is permitted by your institution and your project conditions.
 - GitHub sync sends project data to the repository you choose.
 - Zotero search contacts Zotero's API when you search your library.
 - OpenAlex search contacts OpenAlex when you run academic metadata searches.
@@ -145,6 +156,7 @@ manifest.webmanifest
 - citation formatting is practical rather than fully CSL-complete
 - similarity checks are writing aids, not formal plagiarism reports
 - GitHub sync does not do collaborative merge resolution inside the app yet
+- the supervisor workflow is intentionally lightweight and does not replace institutional supervision systems
 
 ## Manual test checklist
 
@@ -153,8 +165,11 @@ manifest.webmanifest
 3. Enter a GitHub token, reload, and confirm the token is gone while the repository URL remains.
 4. Enter a Zotero API key, reload, and confirm the key is gone while the library ID remains.
 5. Export JSON, import it back, and confirm the project restores without crashing.
-6. Open Project tools and confirm export, import, GitHub, and session-token actions still work.
-7. Click Clear local data and confirm the workspace resets only after confirmation.
+6. Fill in project metadata and confirm it survives refresh and appears in export.
+7. Add a few literature matrix rows and confirm status, argument, method, evidence, and gap fields persist.
+8. Add supervisor notes, questions, and revision tasks, then export a supervisor copy.
+9. Open Project tools and confirm export, import, GitHub, and session-token actions still work.
+10. Click Clear local data and confirm the workspace resets only after confirmation.
 
 ## Development notes
 

@@ -1,10 +1,11 @@
-export const APP_VERSION = "2026.05.14";
+export const APP_VERSION = "2026.05.31";
 export const STORAGE_SCHEMA_VERSION = 2;
 export const STORAGE_KEY = "vellum-atelier-state-v1";
 export const LEGACY_STORAGE_KEYS = ["vellum-atelier-state-v2", "arted-phd-writer-state-v1"];
 export const SESSION_SECRETS_KEY = "vellum-atelier-session-secrets";
 export const EXPORT_FORMAT = "vellum-atelier-project";
 export const defaultFolderId = "folder-unsorted";
+export const templateFolderId = "folder-templates";
 export const defaultGithubBranch = "main";
 export const defaultFontFamily = "Times New Roman";
 export const defaultFontSize = 12;
@@ -40,30 +41,68 @@ export function createDocument(overrides = {}) {
   };
 }
 
+export function createDefaultFolders() {
+  return [
+    { id: defaultFolderId, name: "Current project", createdAt: Date.now() },
+    { id: templateFolderId, name: "Starter templates", createdAt: Date.now(), collapsed: true },
+  ];
+}
+
 export function createStarterDocuments() {
   return [
+    createDocument({
+      title: "Dissertation chapter",
+      content:
+        "<h1>Chapter title</h1><h2>Research question</h2><p>State the chapter question and explain how it connects to the wider dissertation argument.</p><h2>Method</h2><p>Outline the material, method, and analytical approach used in this chapter.</p><h2>Discussion</h2><p>Develop the evidence, interpretation, and contribution of the chapter here.</p>",
+    }),
     createDocument({
       title: "Journal article",
       content:
         "<h1>Working title</h1><h2>Abstract</h2><p>Summarize the problem, argument, method, and contribution in a compact form.</p><h2>Introduction</h2><p>Introduce the topic, explain why it matters, and position the article in relation to existing scholarship.</p>",
+      folderId: templateFolderId,
+      updatedAt: Date.now() - 60_000,
+    }),
+    createDocument({
+      title: "Conference paper",
+      content:
+        "<h1>Presentation title</h1><h2>Core argument</h2><p>State the key claim, why it matters, and what the audience should take away.</p><h2>Material and method</h2><p>Describe the evidence, method, or case material you will present.</p><h2>Takeaway</h2><p>End with the contribution, open question, or next step for discussion.</p>",
+      folderId: templateFolderId,
+      updatedAt: Date.now() - 120_000,
     }),
     createDocument({
       title: "Literature review",
       content:
         "<h2>Key debates</h2><p>Summarize the main conversations, leading authors, and unresolved questions in the field here.</p><h2>Gaps</h2><p>Use this section to note where the literature is thin, contradictory, or methodologically limited.</p>",
-      updatedAt: Date.now() - 60_000,
+      folderId: templateFolderId,
+      updatedAt: Date.now() - 180_000,
     }),
     createDocument({
-      title: "Thesis chapter",
-      content:
-        "<h1>Chapter title</h1><h2>Research question</h2><p>State the chapter question and explain how it connects to the wider project.</p><h2>Method</h2><p>Outline the material, method, and analytical approach used in this chapter.</p><h2>Discussion</h2><p>Develop the evidence, interpretation, and contribution of the chapter here.</p>",
-      updatedAt: Date.now() - 120_000,
-    }),
-    createDocument({
-      title: "Research proposal",
+      title: "Research plan",
       content:
         "<h1>Project title</h1><h2>Problem</h2><p>Describe the research problem and why it deserves attention.</p><h2>Questions</h2><p>List the main research question and any supporting questions.</p><h2>Approach</h2><p>Outline the planned method, material, and expected contribution.</p>",
-      updatedAt: Date.now() - 180_000,
+      folderId: templateFolderId,
+      updatedAt: Date.now() - 240_000,
+    }),
+    createDocument({
+      title: "Funding application outline",
+      content:
+        "<h1>Application title</h1><h2>Need and significance</h2><p>Explain the research need, urgency, and relevance.</p><h2>Objectives</h2><p>List the project aims, questions, and expected outputs.</p><h2>Execution plan</h2><p>Outline the work packages, timetable, and resources required.</p>",
+      folderId: templateFolderId,
+      updatedAt: Date.now() - 300_000,
+    }),
+    createDocument({
+      title: "Supervisor meeting notes",
+      content:
+        "<h1>Meeting notes</h1><h2>Agenda</h2><p>List the questions, decisions, and draft sections to discuss.</p><h2>Discussion notes</h2><p>Capture feedback, risks, and next steps during the meeting.</p><h2>Actions</h2><p>Record what needs to happen before the next meeting.</p>",
+      folderId: templateFolderId,
+      updatedAt: Date.now() - 360_000,
+    }),
+    createDocument({
+      title: "Revision response plan",
+      content:
+        "<h1>Revision plan</h1><h2>Reviewer or supervisor comments</h2><p>Summarize the key requests, critiques, and priorities.</p><h2>Response strategy</h2><p>Explain how each issue will be addressed in the next draft.</p><h2>Completion plan</h2><p>Track what is done, what is pending, and what still needs clarification.</p>",
+      folderId: templateFolderId,
+      updatedAt: Date.now() - 420_000,
     }),
   ];
 }
@@ -71,10 +110,43 @@ export function createStarterDocuments() {
 export function createDefaultState() {
   const starterDocuments = createStarterDocuments();
   return normalizeState({
+    folders: createDefaultFolders(),
     documents: starterDocuments,
     activeId: starterDocuments[0].id,
     customReferences: {},
   });
+}
+
+function defaultProjectState() {
+  return {
+    mode: "dissertation-chapter",
+    workingTitle: "",
+    researcherName: "",
+    programmeField: "",
+    supervisors: "",
+    workStatus: "Planning",
+    targetVenue: "",
+    deadline: "",
+    keywords: "",
+    researchQuestion: "",
+    subQuestions: "",
+    methodology: "",
+    contribution: "",
+    meetingNotes: "",
+    supervisorQuestions: "",
+    revisionTasks: "",
+    nextDeadline: "",
+    supervisorComments: "",
+  };
+}
+
+function normalizeProjectMode(value) {
+  const map = {
+    thesis: "dissertation-chapter",
+    article: "journal-article",
+    proposal: "research-plan",
+  };
+  return map[value] || value || "dissertation-chapter";
 }
 
 function storageGet(storageLike, key) {
@@ -153,7 +225,7 @@ export function normalizeState(value) {
     : createStarterDocuments();
   const folders = Array.isArray(safeValue.folders) && safeValue.folders.length
     ? safeValue.folders
-    : [{ id: defaultFolderId, name: "Unsorted", createdAt: Date.now() }];
+    : createDefaultFolders();
 
   const folderIds = new Set(folders.map((folder) => folder.id));
   const documents = documentsInput.map((doc) => {
@@ -186,15 +258,24 @@ export function normalizeState(value) {
     folders,
     documents,
     project: {
-      mode: "thesis",
-      researchQuestion: "",
-      subQuestions: "",
-      methodology: "",
-      contribution: "",
+      ...defaultProjectState(),
       ...(safeValue.project || {}),
+      mode: normalizeProjectMode(safeValue.project?.mode),
     },
     theme: safeValue.theme || "night",
-    literatureMatrix: Array.isArray(safeValue.literatureMatrix) ? safeValue.literatureMatrix : [],
+    literatureMatrix: Array.isArray(safeValue.literatureMatrix)
+      ? safeValue.literatureMatrix.map((row) => ({
+          id: row.id || createId(),
+          citation: row.citation || row.source || "",
+          status: row.status || "unread",
+          keyArgument: row.keyArgument || row.finding || "",
+          method: row.method || "",
+          framework: row.framework || row.theory || "",
+          evidence: row.evidence || "",
+          relevance: row.relevance || "",
+          gap: row.gap || "",
+        }))
+      : [],
     githubRepoUrl: safeValue.githubRepoUrl || "",
     githubBranch: safeValue.githubBranch || defaultGithubBranch,
     githubToken: safeValue.githubToken || "",

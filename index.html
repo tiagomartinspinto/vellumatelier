@@ -7,22 +7,24 @@
     <meta name="theme-color" content="#0d0f12" />
     <meta
       name="description"
-      content="Vellum Atelier is a local-first academic writing web app for theses, articles, citations, and source discovery."
+      content="Vellum Atelier is a local-first academic writing web app designed for doctoral-level research writing in university contexts."
     />
-    <meta name="app-build" content="2026-05-31-product-refinement" />
-    <link rel="manifest" href="manifest.webmanifest?v=20260531-1" />
-    <link rel="icon" href="assets/icon.svg?v=20260531-1" type="image/svg+xml" />
-    <link rel="stylesheet" href="styles/app.css?v=20260531-1" />
+    <meta name="app-build" content="2026-05-31-doctoral-refinement" />
+    <link rel="manifest" href="manifest.webmanifest?v=20260531-2" />
+    <link rel="icon" href="assets/icon.svg?v=20260531-2" type="image/svg+xml" />
+    <link rel="stylesheet" href="styles/app.css?v=20260531-2" />
   </head>
   <body>
     <div class="app-shell">
       <aside class="sidebar" aria-label="Project navigation">
         <div class="brand">
-          <img class="brand-image brand-icon" src="assets/icon.svg?v=20260531-1" alt="" aria-hidden="true" />
+          <img class="brand-image brand-icon" src="assets/icon.svg?v=20260531-2" alt="" aria-hidden="true" />
           <div>
             <p class="eyebrow">Research writing studio</p>
             <h1>Vellum Atelier</h1>
-            <p class="brand-copy">A quiet place for thesis chapters, articles, and literature work.</p>
+            <p class="brand-copy">
+              Designed for doctoral-level research writing in university contexts.
+            </p>
           </div>
         </div>
 
@@ -58,7 +60,10 @@
             <div class="section-head storage-head">
               <div>
                 <h2 id="syncTitle">Project</h2>
-                <p class="section-copy">Local-first storage, backup, and sync.</p>
+                <p class="section-copy">
+                  Supports dissertation chapters, article drafts, research plans, literature
+                  matrices, supervisor comments, and source tracking.
+                </p>
               </div>
             </div>
             <p id="syncState">Saved locally</p>
@@ -70,7 +75,7 @@
               <summary>Project tools</summary>
               <div class="storage-actions">
                 <button id="exportButton" class="ghost-button" type="button">
-                  Export Word-compatible
+                  Export Word-compatible (.doc)
                 </button>
                 <button id="exportProjectButton" class="ghost-button" type="button">
                   Export JSON
@@ -465,29 +470,90 @@
             </div>
             <button id="addLiteratureRowButton" class="small-button" type="button">Add source</button>
           </div>
-          <div class="plan-form">
-            <label for="projectMode">Project type</label>
-            <select id="projectMode">
-              <option value="thesis">Thesis chapter</option>
-              <option value="article">Journal article</option>
-              <option value="proposal">Research proposal</option>
-              <option value="literature-review">Literature review</option>
-              <option value="conference-paper">Conference paper</option>
-            </select>
-            <label for="researchQuestionInput">Main research question</label>
-            <textarea id="researchQuestionInput" placeholder="What is the central question this project answers?"></textarea>
-            <label for="subQuestionsInput">Sub-questions</label>
-            <textarea id="subQuestionsInput" placeholder="One sub-question per line"></textarea>
-            <label for="methodologyInput">Methodology</label>
-            <textarea id="methodologyInput" placeholder="e.g. case study, interviews, survey, textual analysis"></textarea>
-            <label for="contributionInput">Contribution</label>
-            <textarea id="contributionInput" placeholder="What does this project add to the field?"></textarea>
-          </div>
-          <div class="reading-heading">
-            <p class="eyebrow">Literature review</p>
-            <h2>Matrix</h2>
-          </div>
-          <div id="literatureMatrix" class="literature-matrix"></div>
+          <p class="fine-print doctoral-note">
+            Designed for doctoral-level research writing in university contexts. Keep this local
+            and exportable, then bring in GitHub, Zotero, or OpenAlex only when needed.
+          </p>
+          <details class="utility-disclosure plan-disclosure" open>
+            <summary>Project metadata</summary>
+            <div class="plan-form disclosure-body">
+              <label for="projectMode">Project type</label>
+              <select id="projectMode">
+                <option value="dissertation-chapter">Dissertation chapter</option>
+                <option value="journal-article">Journal article</option>
+                <option value="conference-paper">Conference paper</option>
+                <option value="literature-review">Literature review</option>
+                <option value="research-plan">Research plan</option>
+                <option value="funding-application">Funding application outline</option>
+                <option value="supervisor-meeting-notes">Supervisor meeting notes</option>
+                <option value="revision-response-plan">Revision response plan</option>
+              </select>
+              <label for="workingTitleInput">Working title</label>
+              <input id="workingTitleInput" type="text" placeholder="Provisional title for this project" />
+              <label for="researcherNameInput">Researcher name</label>
+              <input id="researcherNameInput" type="text" placeholder="Your name" />
+              <label for="programmeFieldInput">Programme or field</label>
+              <input id="programmeFieldInput" type="text" placeholder="Programme, department, or research field" />
+              <label for="supervisorsInput">Supervisor(s)</label>
+              <input id="supervisorsInput" type="text" placeholder="Primary or secondary supervisors" />
+              <label for="projectWorkStatusInput">Article or chapter status</label>
+              <select id="projectWorkStatusInput">
+                <option value="Planning">Planning</option>
+                <option value="Drafting">Drafting</option>
+                <option value="Supervisor review">Supervisor review</option>
+                <option value="Revising">Revising</option>
+                <option value="Ready to submit">Ready to submit</option>
+              </select>
+              <label for="targetVenueInput">Target venue</label>
+              <input id="targetVenueInput" type="text" placeholder="Journal, conference, dissertation chapter, or funder" />
+              <label for="deadlineInput">Deadline</label>
+              <input id="deadlineInput" type="date" />
+              <label for="keywordsInput">Keywords</label>
+              <textarea id="keywordsInput" placeholder="Comma-separated keywords for this project"></textarea>
+            </div>
+          </details>
+          <details class="utility-disclosure plan-disclosure" open>
+            <summary>Research framing</summary>
+            <div class="plan-form disclosure-body">
+              <label for="researchQuestionInput">Main research question</label>
+              <textarea id="researchQuestionInput" placeholder="What is the central question this project answers?"></textarea>
+              <label for="subQuestionsInput">Sub-questions</label>
+              <textarea id="subQuestionsInput" placeholder="One sub-question per line"></textarea>
+              <label for="methodologyInput">Methodology</label>
+              <textarea id="methodologyInput" placeholder="Material, method, and analytical approach"></textarea>
+              <label for="contributionInput">Contribution</label>
+              <textarea id="contributionInput" placeholder="What does this work add to the field or conversation?"></textarea>
+            </div>
+          </details>
+          <details class="utility-disclosure plan-disclosure" open>
+            <summary>Supervisor workflow</summary>
+            <div class="plan-form disclosure-body">
+              <label for="meetingNotesInput">Meeting notes</label>
+              <textarea id="meetingNotesInput" placeholder="Capture notes, decisions, and follow-up points from meetings"></textarea>
+              <label for="supervisorQuestionsInput">Questions for supervisor</label>
+              <textarea id="supervisorQuestionsInput" placeholder="List the questions you want to bring to your next meeting"></textarea>
+              <label for="revisionTasksInput">Revision tasks</label>
+              <textarea id="revisionTasksInput" placeholder="Track revision tasks, requested changes, and open tasks"></textarea>
+              <label for="nextDeadlineInput">Next deadline</label>
+              <input id="nextDeadlineInput" type="date" />
+              <label for="supervisorCommentsInput">Supervisor comments</label>
+              <textarea id="supervisorCommentsInput" placeholder="Paste or summarize supervisor feedback here"></textarea>
+              <button id="exportSupervisorCopyButton" class="ghost-button" type="button">
+                Export supervisor copy
+              </button>
+            </div>
+          </details>
+          <details class="utility-disclosure plan-disclosure" open>
+            <summary>Literature matrix</summary>
+            <div class="reading-heading disclosure-body compact-reading-heading">
+              <div>
+                <p class="eyebrow">Literature review</p>
+                <h2>Matrix</h2>
+              </div>
+              <p class="fine-print">Track arguments, methods, evidence, gaps, and reading status.</p>
+            </div>
+            <div id="literatureMatrix" class="literature-matrix disclosure-body"></div>
+          </details>
         </section>
 
         <section id="checksPanel" class="panel">
@@ -546,7 +612,7 @@
       </div>
     </div>
 
-    <script type="module" src="src/main.mjs?v=20260531-1"></script>
+    <script type="module" src="src/main.mjs?v=20260531-2"></script>
     <script>
       if ("serviceWorker" in navigator && location.protocol !== "file:") {
         window.addEventListener("load", () => {
@@ -558,7 +624,7 @@
           });
 
           navigator.serviceWorker
-            .register("./service-worker.js?v=20260531-1")
+            .register("./service-worker.js?v=20260531-2")
             .then((registration) => registration.update())
             .catch(() => {});
         });

@@ -194,7 +194,7 @@ h1 {
   color: var(--muted);
   font-size: 0.74rem;
   line-height: 1.35;
-  max-width: 18ch;
+  max-width: 24ch;
 }
 
 .sidebar-stack {
@@ -839,9 +839,11 @@ body[data-theme="day"] .dropdown-menu {
   outline: none;
 }
 
+.plan-form input,
 .plan-form textarea,
 .plan-form select,
 .matrix-row input,
+.matrix-row select,
 .matrix-row textarea {
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -856,9 +858,11 @@ body[data-theme="day"] .dropdown-menu {
   padding: 0;
 }
 
+.plan-form input:focus,
 .plan-form textarea:focus,
 .plan-form select:focus,
 .matrix-row input:focus,
+.matrix-row select:focus,
 .matrix-row textarea:focus {
   border-color: rgba(226, 229, 232, 0.45);
 }
@@ -1380,6 +1384,11 @@ body[data-theme="day"] .dropdown-menu {
   gap: 8px;
 }
 
+.doctoral-note {
+  margin: -2px 0 2px;
+  line-height: 1.45;
+}
+
 .selection-box,
 .zotero-box {
   display: grid;
@@ -1442,10 +1451,37 @@ body[data-theme="day"] .dropdown-menu {
   font-weight: 800;
 }
 
+.plan-disclosure {
+  margin-top: 2px;
+}
+
+.plan-disclosure .disclosure-body {
+  display: grid;
+  gap: 10px;
+}
+
+.compact-reading-heading {
+  margin-bottom: 0;
+  padding: 0;
+}
+
+.compact-reading-heading .fine-print {
+  max-width: 22ch;
+  text-align: right;
+}
+
+.plan-form input,
 .plan-form textarea {
-  min-height: 70px;
   width: 100%;
   padding: 10px;
+}
+
+.plan-form input {
+  min-height: 38px;
+}
+
+.plan-form textarea {
+  min-height: 70px;
   resize: vertical;
   line-height: 1.45;
 }
@@ -1487,6 +1523,7 @@ body[data-theme="day"] .dropdown-menu {
 }
 
 .matrix-row input,
+.matrix-row select,
 .matrix-row textarea {
   width: 100%;
   min-height: 34px;

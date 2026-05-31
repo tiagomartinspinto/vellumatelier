@@ -85,6 +85,14 @@ const els = {
   openCommandButton: document.querySelector("#openCommandButton"),
   closeCommandButton: document.querySelector("#closeCommandButton"),
   projectMode: document.querySelector("#projectMode"),
+  workingTitleInput: document.querySelector("#workingTitleInput"),
+  researcherNameInput: document.querySelector("#researcherNameInput"),
+  programmeFieldInput: document.querySelector("#programmeFieldInput"),
+  supervisorsInput: document.querySelector("#supervisorsInput"),
+  projectWorkStatusInput: document.querySelector("#projectWorkStatusInput"),
+  targetVenueInput: document.querySelector("#targetVenueInput"),
+  deadlineInput: document.querySelector("#deadlineInput"),
+  keywordsInput: document.querySelector("#keywordsInput"),
   docStatus: document.querySelector("#docStatus"),
   citationStyleSelect: document.querySelector("#citationStyleSelect"),
   blockStyleSelect: document.querySelector("#blockStyleSelect"),
@@ -117,6 +125,12 @@ const els = {
   subQuestionsInput: document.querySelector("#subQuestionsInput"),
   methodologyInput: document.querySelector("#methodologyInput"),
   contributionInput: document.querySelector("#contributionInput"),
+  meetingNotesInput: document.querySelector("#meetingNotesInput"),
+  supervisorQuestionsInput: document.querySelector("#supervisorQuestionsInput"),
+  revisionTasksInput: document.querySelector("#revisionTasksInput"),
+  nextDeadlineInput: document.querySelector("#nextDeadlineInput"),
+  supervisorCommentsInput: document.querySelector("#supervisorCommentsInput"),
+  exportSupervisorCopyButton: document.querySelector("#exportSupervisorCopyButton"),
   literatureMatrix: document.querySelector("#literatureMatrix"),
   checkList: document.querySelector("#checkList"),
   syncState: document.querySelector("#syncState"),
@@ -140,6 +154,27 @@ const els = {
   clearSessionTokensButton: document.querySelector("#clearSessionTokensButton"),
   importFileInput: document.querySelector("#importFileInput"),
 };
+
+const projectFieldBindings = [
+  ["projectMode", "mode", "dissertation-chapter"],
+  ["workingTitleInput", "workingTitle", ""],
+  ["researcherNameInput", "researcherName", ""],
+  ["programmeFieldInput", "programmeField", ""],
+  ["supervisorsInput", "supervisors", ""],
+  ["projectWorkStatusInput", "workStatus", "Planning"],
+  ["targetVenueInput", "targetVenue", ""],
+  ["deadlineInput", "deadline", ""],
+  ["keywordsInput", "keywords", ""],
+  ["researchQuestionInput", "researchQuestion", ""],
+  ["subQuestionsInput", "subQuestions", ""],
+  ["methodologyInput", "methodology", ""],
+  ["contributionInput", "contribution", ""],
+  ["meetingNotesInput", "meetingNotes", ""],
+  ["supervisorQuestionsInput", "supervisorQuestions", ""],
+  ["revisionTasksInput", "revisionTasks", ""],
+  ["nextDeadlineInput", "nextDeadline", ""],
+  ["supervisorCommentsInput", "supervisorComments", ""],
+];
 
 function persist() {
   persistState(state, activeId);
@@ -297,13 +332,13 @@ function deleteDocument(docId) {
 
 function deleteFolder(folderId) {
   if (folderId === defaultFolderId) {
-    alert("The Unsorted folder cannot be deleted.");
+    alert("The Current project folder cannot be deleted.");
     return;
   }
 
   const folder = state.folders.find((item) => item.id === folderId);
   if (!folder) return;
-  if (!confirm(`Delete folder "${folder.name}"? Documents inside will move to Unsorted.`)) return;
+  if (!confirm(`Delete folder "${folder.name}"? Documents inside will move to Current project.`)) return;
 
   state.documents.forEach((doc) => {
     if (doc.folderId === folderId) doc.folderId = defaultFolderId;
@@ -316,25 +351,24 @@ function deleteFolder(folderId) {
 function renderProjectPlan() {
   if (!els.researchQuestionInput) return;
   const project = state.project || {};
-  if (els.projectMode) {
-    syncFieldValue(els.projectMode, project.mode || "thesis");
-  }
-  syncFieldValue(els.researchQuestionInput, project.researchQuestion || "");
-  syncFieldValue(els.subQuestionsInput, project.subQuestions || "");
-  syncFieldValue(els.methodologyInput, project.methodology || "");
-  syncFieldValue(els.contributionInput, project.contribution || "");
+  projectFieldBindings.forEach(([elementKey, field, fallback]) => {
+    const element = els[elementKey];
+    if (!element) return;
+    syncFieldValue(element, project[field] || fallback || "");
+  });
   renderLiteratureMatrix();
 }
 
 function saveProjectPlan() {
-  state.project = {
+  const nextProject = {
     ...(state.project || {}),
-    mode: els.projectMode?.value || state.project?.mode || "thesis",
-    researchQuestion: els.researchQuestionInput.value,
-    subQuestions: els.subQuestionsInput.value,
-    methodology: els.methodologyInput.value,
-    contribution: els.contributionInput.value,
   };
+  projectFieldBindings.forEach(([elementKey, field, fallback]) => {
+    const element = els[elementKey];
+    if (!element) return;
+    nextProject[field] = element.value || fallback || "";
+  });
+  state.project = nextProject;
   schedulePersist();
 }
 
@@ -343,7 +377,7 @@ function renderLiteratureMatrix() {
   const rows = state.literatureMatrix || [];
   if (!rows.length) {
     els.literatureMatrix.innerHTML =
-      '<div class="matrix-empty">Add sources here to build a literature review matrix.</div>';
+      '<div class="matrix-empty">Add sources here to build a literature review matrix for arguments, methods, evidence, and gaps.</div>';
     return;
   }
 
@@ -351,11 +385,21 @@ function renderLiteratureMatrix() {
     .map(
       (row) => `
         <article class="matrix-row" data-matrix-id="${escapeHtml(row.id)}">
-          <label>Source<input data-lit-field="source" value="${escapeAttribute(row.source || "")}" placeholder="Author, year, title" /></label>
-          <label>Theory<input data-lit-field="theory" value="${escapeAttribute(row.theory || "")}" placeholder="Key concept" /></label>
-          <label>Method<input data-lit-field="method" value="${escapeAttribute(row.method || "")}" placeholder="Methodology" /></label>
-          <label>Finding<textarea data-lit-field="finding" placeholder="Main finding">${escapeHtml(row.finding || "")}</textarea></label>
-          <label>Relevance<textarea data-lit-field="relevance" placeholder="Why it matters">${escapeHtml(row.relevance || "")}</textarea></label>
+          <label>Citation<input data-lit-field="citation" value="${escapeAttribute(row.citation || row.source || "")}" placeholder="Author, year, title" /></label>
+          <label>Status
+            <select data-lit-field="status">
+              <option value="unread" ${row.status === "unread" ? "selected" : ""}>Unread</option>
+              <option value="skimmed" ${row.status === "skimmed" ? "selected" : ""}>Skimmed</option>
+              <option value="read" ${row.status === "read" ? "selected" : ""}>Read</option>
+              <option value="cited" ${row.status === "cited" ? "selected" : ""}>Cited</option>
+            </select>
+          </label>
+          <label>Key argument<textarea data-lit-field="keyArgument" placeholder="Main argument or claim">${escapeHtml(row.keyArgument || row.finding || "")}</textarea></label>
+          <label>Method<input data-lit-field="method" value="${escapeAttribute(row.method || "")}" placeholder="Methodology or approach" /></label>
+          <label>Theory or framework<input data-lit-field="framework" value="${escapeAttribute(row.framework || row.theory || "")}" placeholder="Theory, framework, or concept" /></label>
+          <label>Evidence or material<textarea data-lit-field="evidence" placeholder="Material, data, or case evidence">${escapeHtml(row.evidence || "")}</textarea></label>
+          <label>Relevance to my project<textarea data-lit-field="relevance" placeholder="Why this source matters for your project">${escapeHtml(row.relevance || "")}</textarea></label>
+          <label>Gap or critique<textarea data-lit-field="gap" placeholder="What is limited, missing, or still open?">${escapeHtml(row.gap || "")}</textarea></label>
           <button class="delete-button" type="button" data-delete-lit="${escapeHtml(row.id)}" aria-label="Delete literature matrix row">×</button>
         </article>
       `,
@@ -367,11 +411,14 @@ function addLiteratureRow() {
   state.literatureMatrix = state.literatureMatrix || [];
   state.literatureMatrix.push({
     id: crypto.randomUUID(),
-    source: "",
-    theory: "",
+    citation: "",
+    status: "unread",
+    keyArgument: "",
     method: "",
-    finding: "",
+    framework: "",
+    evidence: "",
     relevance: "",
+    gap: "",
   });
   persist();
   renderLiteratureMatrix();
@@ -474,7 +521,7 @@ function renderEditor() {
   syncFieldValue(els.docTitle, doc.title);
   syncFieldValue(els.docStatus, doc.status || "Draft");
   if (els.projectMode) {
-    syncFieldValue(els.projectMode, state.project?.mode || "thesis");
+    syncFieldValue(els.projectMode, state.project?.mode || "dissertation-chapter");
   }
   syncFieldValue(els.citationStyleSelect, doc.style || "apa");
   els.editor.innerHTML = doc.content;
@@ -769,6 +816,12 @@ function commandItems() {
       label: "Export Word",
       hint: "Download the current draft as a Word-compatible document",
       run: exportDoc,
+    },
+    {
+      id: "export-supervisor-copy",
+      label: "Export supervisor copy",
+      hint: "Download the supervision notes and project metadata as a Word-compatible document",
+      run: exportSupervisorCopy,
     },
     {
       id: "push-github",
@@ -1737,11 +1790,49 @@ function cachedReferenceTokens(ref) {
   return tokens;
 }
 
+function editorBlocks(selector = "p, li, blockquote") {
+  return Array.from(els.editor.querySelectorAll(selector))
+    .filter((node) => !node.closest("[data-bibliography-section='true']"))
+    .map((node) => node.textContent.trim())
+    .filter(Boolean);
+}
+
+function editorHeadings() {
+  return Array.from(els.editor.querySelectorAll("h1, h2, h3, h4"))
+    .filter((node) => !node.closest("[data-bibliography-section='true']"))
+    .map((node) => node.textContent.trim())
+    .filter(Boolean);
+}
+
+function keywordList(value = state.project?.keywords || "") {
+  return String(value)
+    .split(",")
+    .map((item) => item.trim().toLowerCase())
+    .filter(Boolean);
+}
+
+function hasMethodLanguage(text) {
+  return /\b(method|methodology|material|materials|data|interview|survey|case study|ethnograph|analysis|archive|participant|sample|corpus)\b/i.test(text);
+}
+
+function hasContributionLanguage(text) {
+  return /\b(contribution|contributes|contribute|adds to|offers a|this (article|chapter|study|paper|project) (offers|contributes|argues|demonstrates))\b/i.test(text);
+}
+
+function hasSignpostingLanguage(text) {
+  return /\b(in this section|in this chapter|in this article|the next section|the following section|first,|second,|finally,|to begin with|turning to|taken together|in what follows)\b/i.test(text);
+}
+
 function runChecks() {
   const text = textFromEditor();
   const checks = [];
   const lowerWords = text.toLowerCase().match(/\b[\w'-]+\b/g) || [];
   const sourceMatches = sourceMatchesForText(currentParagraphText());
+  const paragraphTexts = editorBlocks("p, blockquote");
+  const citationTokenCount = els.editor.querySelectorAll(".citation-token").length;
+  const keywords = keywordList();
+  const headings = editorHeadings();
+  const project = state.project || {};
 
   Object.entries(typoMap).forEach(([bad, good]) => {
     if (lowerWords.includes(bad)) {
@@ -1765,6 +1856,17 @@ function runChecks() {
       });
     });
 
+  paragraphTexts
+    .filter((paragraph) => countWords(paragraph) > 140)
+    .slice(0, 2)
+    .forEach((paragraph) => {
+      checks.push({
+        level: "warning",
+        title: "Overly long paragraph",
+        body: `${paragraph.slice(0, 170)}... Consider breaking this paragraph into clearer argumentative steps.`,
+      });
+    });
+
   const aiLikePhrases = [
     "delves into",
     "it is important to note",
@@ -1783,14 +1885,81 @@ function runChecks() {
     }
   });
 
-  const claimWords = ["shows", "proves", "demonstrates", "argues", "suggests"];
-  const hasClaim = claimWords.some((word) => lowerWords.includes(word));
-  const hasCitation = hasInTextCitation(text);
-  if (hasClaim && !hasCitation) {
+  const claimWords = ["shows", "proves", "demonstrates", "argues", "suggests", "indicates", "reveals"];
+  const unsupportedClaims = text
+    .split(/[.!?]\s+/)
+    .map((sentence) => sentence.trim())
+    .filter((sentence) => sentence && claimWords.some((word) => sentence.toLowerCase().includes(word)))
+    .filter((sentence) => !hasInTextCitation(sentence))
+    .slice(0, 3);
+
+  unsupportedClaims.forEach((sentence) => {
     checks.push({
       level: "warning",
-      title: "Claim may need a citation",
-      body: "This draft makes an academic claim but does not yet include an in-text citation.",
+      title: "Unsupported claim",
+      body: `${sentence.slice(0, 160)}... Consider adding evidence or a citation.`,
+    });
+  });
+
+  if (countWords(text) > 140 && citationTokenCount === 0) {
+    checks.push({
+      level: "warning",
+      title: "Missing citations",
+      body: "This draft is substantial enough to benefit from at least one explicit citation or note to source material.",
+    });
+  }
+
+  if (!project.researchQuestion?.trim()) {
+    checks.push({
+      level: "warning",
+      title: "Research question is unclear",
+      body: "Add a main research question in Project plan so the draft and review checks have a clearer anchor.",
+    });
+  }
+
+  if (!project.contribution?.trim() && !hasContributionLanguage(text)) {
+    checks.push({
+      level: "warning",
+      title: "Missing contribution statement",
+      body: "The draft does not yet make its contribution explicit. State what this chapter, article, or plan adds to the discussion.",
+    });
+  }
+
+  if ((!project.methodology?.trim() || project.methodology.trim().length < 18) && !hasMethodLanguage(text)) {
+    checks.push({
+      level: "warning",
+      title: "Methodology explanation looks thin",
+      body: "Add a clearer account of material, method, or analytical approach so readers can understand how the argument is supported.",
+    });
+  }
+
+  if (keywords.length) {
+    const missingKeywords = keywords.filter((keyword) => !text.toLowerCase().includes(keyword));
+    if (missingKeywords.length > 0 && missingKeywords.length < keywords.length) {
+      checks.push({
+        level: "warning",
+        title: "Terminology may be drifting",
+        body: `Some project keywords are not appearing in the draft yet: ${missingKeywords.slice(0, 4).join(", ")}.`,
+      });
+    }
+  } else {
+    const focusSpread = focusScoresForText(text)
+      .filter((item) => item.score >= 10)
+      .slice(0, 3);
+    if (focusSpread.length === 3 && focusSpread[0].score - focusSpread[2].score <= 7) {
+      checks.push({
+        level: "warning",
+        title: "Terminology may be inconsistent",
+        body: `The draft is currently split across ${focusSpread.map((item) => item.topic).join(", ")}. Check whether your core terms are named consistently.`,
+      });
+    }
+  }
+
+  if (headings.length >= 3 && !hasSignpostingLanguage(text)) {
+    checks.push({
+      level: "warning",
+      title: "Signposting between sections is light",
+      body: "With several sections already in place, add a few guiding sentences that explain how one section leads to the next.",
     });
   }
 
@@ -1806,7 +1975,7 @@ function runChecks() {
     checks.push({
       level: "ok",
       title: "No urgent issues",
-      body: "Spelling, citation, and generic-phrasing checks look clear for this pass.",
+      body: "The current pass looks sound for question, method, contribution, and citation coverage.",
     });
   }
 
@@ -2177,14 +2346,180 @@ function downloadBlob(blob, filename) {
   URL.revokeObjectURL(url);
 }
 
+function exportFilename(doc = activeDocument(), suffix = "") {
+  const base = doc.title.replace(/[^\w-]+/g, "-").toLowerCase() || "document";
+  return `${base}${suffix}.doc`;
+}
+
+function projectMetadataEntries(doc = activeDocument()) {
+  const project = state.project || {};
+  return [
+    ["Document type", project.mode],
+    ["Draft status", doc.status || project.workStatus || ""],
+    ["Project status", project.workStatus],
+    ["Researcher", project.researcherName],
+    ["Programme or field", project.programmeField],
+    ["Supervisor(s)", project.supervisors],
+    ["Target venue", project.targetVenue],
+    ["Deadline", project.deadline],
+    ["Keywords", project.keywords],
+    ["Citation style", doc.style?.toUpperCase?.() || "APA"],
+  ].filter(([, value]) => String(value || "").trim());
+}
+
+function humanizeProjectMode(value = "") {
+  return String(value || "")
+    .split("-")
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
+function buildExportRoot(doc = activeDocument()) {
+  const root = document.createElement("div");
+  root.innerHTML = doc.content;
+  return root;
+}
+
+function extractSection(root, matcher) {
+  const headings = Array.from(root.querySelectorAll("h1, h2, h3, h4"));
+  const heading = headings.find((item) => matcher(item.textContent.trim().toLowerCase()));
+  if (!heading) return "";
+
+  const sectionNodes = [];
+  let sibling = heading.nextElementSibling;
+  while (sibling && !/^H[1-4]$/.test(sibling.tagName)) {
+    sectionNodes.push(sibling);
+    sibling = sibling.nextElementSibling;
+  }
+
+  const html = sectionNodes.map((node) => node.outerHTML).join("");
+  heading.remove();
+  sectionNodes.forEach((node) => node.remove());
+  return html.trim();
+}
+
+function removeBibliography(root) {
+  const bibliography = root.querySelector("[data-bibliography-section='true']");
+  if (!bibliography) return "";
+  const html = bibliography.innerHTML.trim();
+  bibliography.remove();
+  return html;
+}
+
+function buildAcademicExportHtml({
+  title,
+  subtitle = "",
+  metadataEntries = [],
+  abstractHtml = "",
+  bodyHtml = "",
+  bibliographyHtml = "",
+  appendixHtml = "",
+}) {
+  const metadataHtml = metadataEntries.length
+    ? `<dl class="export-metadata">${metadataEntries
+        .map(
+          ([label, value]) =>
+            `<div><dt>${escapeHtml(label)}</dt><dd>${escapeHtml(
+              label === "Document type" ? humanizeProjectMode(value) : String(value),
+            )}</dd></div>`,
+        )
+        .join("")}</dl>`
+    : "";
+
+  return `<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>${escapeHtml(title)}</title>
+    <style>
+      body { font-family: "Times New Roman", Times, serif; color: #111; line-height: 1.55; margin: 36px; }
+      h1, h2, h3 { margin: 0 0 14px; }
+      h1 { font-size: 24px; }
+      h2 { font-size: 16px; margin-top: 30px; }
+      h3 { font-size: 14px; margin-top: 22px; }
+      p, li, blockquote { font-size: 12pt; }
+      blockquote { margin: 0 0 0 18px; padding-left: 14px; border-left: 2px solid #b5b5b5; }
+      .export-kicker { margin: 0 0 10px; color: #555; font-size: 10pt; text-transform: uppercase; }
+      .export-subtitle { margin: 0 0 22px; color: #444; }
+      .export-metadata { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 18px; margin: 0 0 24px; }
+      .export-metadata div { break-inside: avoid; }
+      .export-metadata dt { font-weight: 700; font-size: 10pt; color: #555; }
+      .export-metadata dd { margin: 4px 0 0; font-size: 11pt; }
+      .export-section { margin-top: 28px; }
+      .export-note { margin-top: 34px; color: #555; font-size: 10pt; }
+    </style>
+  </head>
+  <body>
+    <p class="export-kicker">Vellum Atelier Word-compatible export</p>
+    <h1>${escapeHtml(title)}</h1>
+    ${subtitle ? `<p class="export-subtitle">${escapeHtml(subtitle)}</p>` : ""}
+    ${metadataHtml}
+    ${abstractHtml ? `<section class="export-section"><h2>Abstract</h2>${abstractHtml}</section>` : ""}
+    <section class="export-section">${bodyHtml}</section>
+    ${appendixHtml ? `<section class="export-section"><h2>Supervisor workflow</h2>${appendixHtml}</section>` : ""}
+    ${bibliographyHtml ? `<section class="export-section"><h2>Bibliography</h2>${bibliographyHtml}</section>` : ""}
+    <p class="export-note">This export is Word-compatible HTML saved with a .doc extension. It is not a true .docx file.</p>
+  </body>
+</html>`;
+}
+
 function exportDoc() {
   saveCurrentDocument();
   const doc = activeDocument();
-  const html = `<!doctype html><html><head><meta charset="utf-8"><title>${escapeHtml(doc.title)}</title></head><body><h1>${escapeHtml(doc.title)}</h1>${doc.content}</body></html>`;
+  const root = buildExportRoot(doc);
+  const abstractHtml = extractSection(root, (heading) => heading === "abstract");
+  const bibliographyHtml = removeBibliography(root);
+  const supervisorAppendix = buildSupervisorAppendixHtml();
+  const html = buildAcademicExportHtml({
+    title: doc.title,
+    subtitle: state.project?.workingTitle || "",
+    metadataEntries: projectMetadataEntries(doc),
+    abstractHtml,
+    bodyHtml: root.innerHTML,
+    bibliographyHtml,
+    appendixHtml: supervisorAppendix,
+  });
   const blob = new Blob([html], { type: "application/msword" });
-  downloadBlob(blob, `${doc.title.replace(/[^\w-]+/g, "-").toLowerCase() || "document"}.doc`);
+  downloadBlob(blob, exportFilename(doc));
   setBackupMessage(
-    "Word-compatible export downloaded. Exported files can contain sensitive draft content and references.",
+    "Word-compatible (.doc) export downloaded. It is not a true .docx file and may contain sensitive draft, metadata, and bibliography data.",
+  );
+}
+
+function buildSupervisorAppendixHtml() {
+  const project = state.project || {};
+  const items = [
+    ["Meeting notes", project.meetingNotes],
+    ["Questions for supervisor", project.supervisorQuestions],
+    ["Revision tasks", project.revisionTasks],
+    ["Next deadline", project.nextDeadline],
+    ["Supervisor comments", project.supervisorComments],
+  ].filter(([, value]) => String(value || "").trim());
+
+  if (!items.length) return "";
+
+  return items
+    .map(
+      ([label, value]) => `<section><h3>${escapeHtml(label)}</h3><p>${escapeHtml(String(value)).replace(/\n/g, "<br />")}</p></section>`,
+    )
+    .join("");
+}
+
+function exportSupervisorCopy() {
+  saveCurrentDocument();
+  const doc = activeDocument();
+  const html = buildAcademicExportHtml({
+    title: `${doc.title} — supervisor copy`,
+    subtitle: state.project?.workingTitle || "",
+    metadataEntries: projectMetadataEntries(doc),
+    bodyHtml: `<p>This supervisor copy contains the current draft metadata and the supervision workflow notes prepared in Vellum Atelier.</p>`,
+    appendixHtml: buildSupervisorAppendixHtml() || "<p>No supervisor workflow notes have been added yet.</p>",
+  });
+  const blob = new Blob([html], { type: "application/msword" });
+  downloadBlob(blob, exportFilename(doc, "-supervisor-copy"));
+  setBackupMessage(
+    "Supervisor copy exported as a Word-compatible (.doc) file with project metadata and supervision notes.",
   );
 }
 
@@ -2387,24 +2722,24 @@ els.docStatus.addEventListener("change", () => {
   renderDocuments();
 });
 
-els.projectMode?.addEventListener("change", () => {
-  state.project.mode = els.projectMode.value;
-  persist();
+projectFieldBindings.forEach(([elementKey]) => {
+  const element = els[elementKey];
+  if (!element) return;
+  element.addEventListener("input", saveProjectPlan);
+  element.addEventListener("change", saveProjectPlan);
 });
 
-[els.researchQuestionInput, els.subQuestionsInput, els.methodologyInput, els.contributionInput].forEach(
-  (input) => {
-    input.addEventListener("input", saveProjectPlan);
-  },
-);
-
 document.querySelector("#addLiteratureRowButton").addEventListener("click", addLiteratureRow);
+els.exportSupervisorCopyButton?.addEventListener("click", exportSupervisorCopy);
 
-els.literatureMatrix.addEventListener("input", (event) => {
+function handleLiteratureMatrixEdit(event) {
   const field = event.target.dataset?.litField;
   const rowId = event.target.closest("[data-matrix-id]")?.dataset.matrixId;
   if (field && rowId) updateLiteratureRow(rowId, field, event.target.value);
-});
+}
+
+els.literatureMatrix.addEventListener("input", handleLiteratureMatrixEdit);
+els.literatureMatrix.addEventListener("change", handleLiteratureMatrixEdit);
 
 els.literatureMatrix.addEventListener("click", (event) => {
   const rowId = event.target.dataset?.deleteLit;
