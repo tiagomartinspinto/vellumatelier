@@ -1,4 +1,4 @@
-const CACHE_NAME = "vellum-atelier-v20260514-1";
+const CACHE_NAME = "vellum-atelier-v20260531-1";
 const APP_SHELL = [
   "./",
   "./index.html",

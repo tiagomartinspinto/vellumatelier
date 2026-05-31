@@ -1,56 +1,54 @@
 # Project Status
 
-## Completed in this pass
+## Completed
 
-- renamed the browser autosave key to `vellum-atelier-state-v1`
-- added migration from legacy storage keys and removed old keys after successful migration
-- stopped persisting GitHub tokens and private Zotero API keys in `localStorage`
-- kept session-only secrets in `sessionStorage`
-- added visible browser reset and session-token clear actions
-- sanitized GitHub snapshot payloads so private Zotero API keys are not exported to repository snapshots
-- renamed the sync helper config file to `.vellum-atelier-sync.json`
-- hardened helper CORS to only allow the local app origins
-- replaced domain-specific starter content and reference seeds with more neutral academic templates
-- updated privacy and security documentation
-- expanded `.gitignore` for local secrets, logs, builds, and generated snapshot content
+- kept Vellum Atelier naming as the visible product identity
+- preserved migration from legacy browser storage keys to `vellum-atelier-state-v1`
+- kept GitHub and Zotero secrets out of persistent browser storage
+- kept session-only token copy visible in the UI
+- kept a visible `Clear local data` action
+- made starter documents generic:
+  - thesis chapter
+  - journal article
+  - literature review
+  - research proposal
+- reduced interface noise by:
+  - giving the editor more room
+  - tucking project utilities behind `Project tools`
+  - tucking OpenAlex and Zotero search into calmer disclosures
+  - softening sidebar and assistant chrome
+- refreshed README structure and manual test checklist
+- added `.idea/` to `.gitignore`
 
-## Files changed
+## Files Changed
 
-- `src/lib/storage.mjs`
-- `src/data/reference-data.mjs`
-- `src/main.mjs`
-- `server/sync-server.cjs`
 - `index.html`
 - `styles/app.css`
-- `service-worker.js`
-- `.gitignore`
+- `src/lib/storage.mjs`
 - `README.md`
 - `PROJECT_STATUS.md`
-- `github-export/README.md`
-- removed `.phd-writer-sync.json`
+- `service-worker.js`
+- `.gitignore`
 
-## Remaining tasks
+## Remaining Tasks
 
-- add linting, formatting, and automated tests
-- split `src/main.mjs` further into smaller UI modules
-- improve service worker UX with a visible “update available” banner instead of silent refresh behavior
-- upgrade Word export from Word-compatible HTML `.doc` to real `.docx`
-- improve keyboard support for menus and context actions
-- add safer conflict handling for GitHub pull/push
+- split `src/main.mjs` into smaller UI modules
+- add linting, formatting checks, and basic tests
+- improve update UX for the service worker with a visible reload banner
+- upgrade export from Word-compatible `.doc` to real `.docx`
+- tighten keyboard support for menus, disclosures, and editor actions
 
-## Known issues
+## Known Issues
 
-- the editor still relies on `document.execCommand`, which is aging browser API surface
-- browser sync requires a GitHub token each session
-- the helper only accepts the local app origins on port `4180`
-- service worker updates are versioned, but the refresh UX is still basic
+- the editor still relies on `document.execCommand`
+- GitHub browser sync still requires a token each session
+- citation formatting is useful but not a full CSL word-processor implementation
 
-## Manual tests to run next
+## Manual Tests Next
 
-1. Open the app, write text, refresh, and confirm the draft restores from `vellum-atelier-state-v1`.
-2. Enter a GitHub token, reload the page, and confirm the token is gone while the repo URL remains.
-3. Enter a Zotero API key, reload the page, and confirm the key is gone while the library ID remains.
-4. Click `Reset browser data` and confirm drafts, session secrets, and sync state are cleared.
-5. Export JSON, import it back, and confirm the project restores without crashing.
-6. Start `node server/sync-server.cjs` and confirm requests from `http://127.0.0.1:4180` work.
-7. Try the helper from a non-allowed origin and confirm it is rejected.
+1. Load the app and confirm the default view feels quieter and more writing-first.
+2. Open `Project tools` and confirm export, import, GitHub, and session-token actions still work.
+3. Refresh and confirm autosaved drafts restore.
+4. Enter a GitHub token, reload, and confirm the token does not persist.
+5. Enter a Zotero API key, reload, and confirm the key does not persist.
+6. Click `Clear local data` and confirm the reset requires confirmation.

@@ -112,7 +112,7 @@ textarea:focus-visible,
 
 .app-shell {
   display: grid;
-  grid-template-columns: 280px minmax(0, 1fr) 360px;
+  grid-template-columns: 252px minmax(0, 1fr) 332px;
   min-height: 100vh;
   isolation: isolate;
 }
@@ -133,10 +133,10 @@ body[data-theme="day"] .assistant-panel {
 .sidebar {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
-  gap: 16px;
-  padding: 18px;
+  gap: 14px;
+  padding: 16px;
   border-width: 0 1px 0 0;
-  box-shadow: 18px 0 45px rgba(0, 0, 0, 0.14);
+  box-shadow: 18px 0 36px rgba(0, 0, 0, 0.11);
   position: sticky;
   top: 0;
   height: 100vh;
@@ -146,7 +146,7 @@ body[data-theme="day"] .assistant-panel {
 .brand {
   display: grid;
   grid-template-columns: 40px 1fr;
-  gap: 12px;
+  gap: 10px;
   align-items: start;
 }
 
@@ -194,23 +194,24 @@ h1 {
   color: var(--muted);
   font-size: 0.74rem;
   line-height: 1.35;
+  max-width: 18ch;
 }
 
 .sidebar-stack {
   display: grid;
   grid-template-rows: minmax(0, 1fr) auto;
-  gap: 12px;
+  gap: 10px;
   min-height: 0;
 }
 
 .sidebar-section {
   display: grid;
-  gap: 12px;
+  gap: 10px;
   min-height: 0;
-  padding: 14px 14px 12px;
+  padding: 13px 13px 11px;
   border: 1px solid var(--line);
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.028);
+  background: rgba(255, 255, 255, 0.024);
 }
 
 .section-head {
@@ -332,9 +333,9 @@ body[data-theme="day"] .dropdown-menu {
 }
 
 .quick-actions button {
-  min-height: 38px;
-  padding: 0 14px;
-  font-size: 0.9rem;
+  min-height: 36px;
+  padding: 0 13px;
+  font-size: 0.84rem;
 }
 
 .quick-actions .primary-button {
@@ -371,7 +372,7 @@ body[data-theme="day"] .dropdown-menu {
 
 .document-list {
   display: grid;
-  gap: 10px;
+  gap: 8px;
 }
 
 .document-item {
@@ -380,10 +381,10 @@ body[data-theme="day"] .dropdown-menu {
   gap: 8px;
   align-items: center;
   width: 100%;
-  padding: 9px;
+  padding: 8px;
   text-align: left;
   color: var(--ink);
-  background: rgba(255, 255, 255, 0.035);
+  background: rgba(255, 255, 255, 0.028);
   border: 1px solid var(--line);
   border-radius: 8px;
 }
@@ -428,7 +429,7 @@ body[data-theme="day"] .dropdown-menu {
   padding: 6px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.035);
+  background: rgba(255, 255, 255, 0.028);
 }
 
 .folder-block.drag-over {
@@ -582,13 +583,14 @@ body[data-theme="day"] .dropdown-menu {
 }
 
 .backup-panel {
-  gap: 8px;
+  gap: 6px;
 }
 
 .storage-actions {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
+  margin-top: 10px;
 }
 
 .storage-actions .ghost-button {
@@ -610,11 +612,11 @@ body[data-theme="day"] .dropdown-menu {
 #syncState {
   margin: 0;
   color: var(--muted);
-  font-size: 0.78rem;
+  font-size: 0.76rem;
 }
 
 .backup-note {
-  margin-top: 2px;
+  margin-top: 0;
 }
 
 .backup-note[data-tone="warning"] {
@@ -628,6 +630,54 @@ body[data-theme="day"] .dropdown-menu {
   border: 1px solid var(--line);
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.035);
+}
+
+.project-tools,
+.utility-disclosure {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.project-tools > summary,
+.utility-disclosure > summary {
+  list-style: none;
+  cursor: pointer;
+  padding: 10px 12px;
+  color: var(--ink);
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.project-tools > summary::-webkit-details-marker,
+.utility-disclosure > summary::-webkit-details-marker {
+  display: none;
+}
+
+.project-tools[open] > summary,
+.utility-disclosure[open] > summary {
+  border-bottom: 1px solid var(--line);
+}
+
+.project-tools > summary::after,
+.utility-disclosure > summary::after {
+  float: right;
+  color: var(--muted);
+  content: "+";
+}
+
+.project-tools[open] > summary::after,
+.utility-disclosure[open] > summary::after {
+  content: "−";
+}
+
+.project-tools > .storage-actions,
+.project-tools > .ghost-button {
+  margin: 10px;
+}
+
+.utility-disclosure > .disclosure-body {
+  padding: 12px;
 }
 
 .sync-badge {
@@ -685,8 +735,8 @@ body[data-theme="day"] .dropdown-menu {
   min-width: 0;
   overflow: visible;
   background:
-    linear-gradient(rgba(255, 255, 255, 0.018) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.014) 1px, transparent 1px);
+    linear-gradient(rgba(255, 255, 255, 0.012) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.01) 1px, transparent 1px);
   background-size: 48px 48px;
 }
 
@@ -696,10 +746,10 @@ body[data-theme="day"] .dropdown-menu {
   grid-template-areas:
     "title utilities"
     "meta meta";
-  gap: 14px 18px;
+  gap: 12px 16px;
   align-items: start;
-  padding: 18px 28px 14px;
-  background: rgba(15, 22, 24, 0.72);
+  padding: 16px 28px 12px;
+  background: rgba(14, 18, 21, 0.76);
   border-bottom: 1px solid var(--line);
   backdrop-filter: blur(18px);
   position: relative;
@@ -725,7 +775,7 @@ body[data-theme="day"] .dropdown-menu {
   border-bottom: 2px solid var(--line);
   background: transparent;
   color: var(--ink);
-  font-size: 1.28rem;
+  font-size: 1.22rem;
   font-weight: 800;
   outline: none;
 }
@@ -820,10 +870,10 @@ body[data-theme="day"] .dropdown-menu {
 .editor-toolbar {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 8px;
   align-items: center;
-  padding: 10px 28px 14px;
-  background: rgba(11, 13, 15, 0.74);
+  padding: 10px 28px 12px;
+  background: rgba(10, 12, 15, 0.78);
   border-bottom: 1px solid var(--line);
   backdrop-filter: blur(18px);
   position: sticky;
@@ -836,10 +886,10 @@ body[data-theme="day"] .dropdown-menu {
   flex-wrap: wrap;
   gap: 8px;
   align-items: center;
-  padding: 8px 10px;
+  padding: 7px 9px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.035);
+  background: rgba(255, 255, 255, 0.028);
   min-width: 0;
 }
 
@@ -897,7 +947,7 @@ body[data-theme="day"] .dropdown-menu {
 .editor-stage {
   min-height: 0;
   overflow: auto;
-  padding: 28px clamp(18px, 5vw, 72px) 48px;
+  padding: 28px clamp(18px, 5vw, 84px) 56px;
   background: linear-gradient(180deg, rgba(210, 213, 218, 0.035), transparent 28%);
 }
 
@@ -914,9 +964,9 @@ body[data-theme="day"] .dropdown-menu {
   margin: 0 auto;
   padding: var(--doc-page-padding, clamp(30px, 6vw, 68px));
   background: var(--editor-paper);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.16);
   border-radius: 8px;
-  box-shadow: var(--shadow);
+  box-shadow: 0 32px 80px rgba(0, 0, 0, 0.34);
   color: var(--editor-ink);
   font-family: var(--doc-font-family, Georgia), "Times New Roman", serif;
   font-size: var(--doc-font-size, 1.08rem);
@@ -930,7 +980,7 @@ body[data-theme="day"] .dropdown-menu {
 
 .editor:empty::before {
   color: #7a817d;
-  content: "Start drafting your thesis chapter or article here...";
+  content: "Start writing. Add structure, citations, and sources as the draft takes shape.";
 }
 
 .editor h1,
@@ -1065,7 +1115,7 @@ body[data-theme="day"] .dropdown-menu {
 .metrics-bar {
   display: flex;
   flex-wrap: wrap;
-  gap: 18px;
+  gap: 14px;
   padding: 14px 28px;
   color: var(--muted);
   background: rgba(23, 33, 35, 0.92);
@@ -1087,9 +1137,9 @@ body[data-theme="day"] .dropdown-menu {
   display: grid;
   grid-template-rows: auto auto auto minmax(0, 1fr);
   min-width: 0;
-  padding: 16px;
+  padding: 14px;
   border-width: 0 0 0 1px;
-  box-shadow: -18px 0 45px rgba(0, 0, 0, 0.14);
+  box-shadow: -18px 0 36px rgba(0, 0, 0, 0.11);
   position: sticky;
   top: 0;
   height: 100vh;
@@ -1100,7 +1150,7 @@ body[data-theme="day"] .dropdown-menu {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 4px;
-  margin: 0 0 18px;
+  margin: 0 0 14px;
   padding: 4px;
   border: 1px solid var(--line);
   border-radius: 14px;
@@ -1124,8 +1174,8 @@ body[data-theme="day"] .dropdown-menu {
 .tab {
   position: relative;
   min-width: 0;
-  min-height: 52px;
-  padding: 8px 4px 7px;
+  min-height: 46px;
+  padding: 7px 4px 6px;
   display: grid;
   place-items: center;
   gap: 6px;
@@ -1133,7 +1183,7 @@ body[data-theme="day"] .dropdown-menu {
   white-space: nowrap;
   overflow: visible;
   text-overflow: clip;
-  font-size: 0.76rem;
+  font-size: 0.72rem;
   line-height: 1;
   color: var(--text-soft);
 }
@@ -1260,7 +1310,7 @@ body[data-theme="day"] .dropdown-menu {
   justify-content: space-between;
   gap: 12px;
   align-items: center;
-  margin-bottom: 14px;
+  margin-bottom: 10px;
 }
 
 .reference-list,
@@ -1456,10 +1506,10 @@ body[data-theme="day"] .dropdown-menu {
 .reference-card,
 .check-card,
 .reading-card {
-  padding: 13px;
+  padding: 12px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.045);
+  background: rgba(255, 255, 255, 0.038);
 }
 
 .reference-card h3,
@@ -1540,8 +1590,8 @@ body[data-theme="day"] .dropdown-menu {
 }
 
 .reading-heading {
-  margin-top: 18px;
-  padding-top: 14px;
+  margin-top: 14px;
+  padding-top: 12px;
   border-top: 1px solid var(--line);
 }
 

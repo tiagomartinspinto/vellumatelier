@@ -43,21 +43,27 @@ export function createDocument(overrides = {}) {
 export function createStarterDocuments() {
   return [
     createDocument({
-      title: "Article draft",
+      title: "Journal article",
       content:
-        "<h1>Working title</h1><h2>Abstract</h2><p>This draft introduces the research problem, states the argument, and sets out the scope of the article. Replace this text with your own summary, key terms, and core claim.</p><h2>Introduction</h2><p>Use the opening section to introduce the topic, explain why it matters, and position the article within the relevant literature.</p>",
+        "<h1>Working title</h1><h2>Abstract</h2><p>Summarize the problem, argument, method, and contribution in a compact form.</p><h2>Introduction</h2><p>Introduce the topic, explain why it matters, and position the article in relation to existing scholarship.</p>",
     }),
     createDocument({
-      title: "Literature review notes",
+      title: "Literature review",
       content:
         "<h2>Key debates</h2><p>Summarize the main conversations, leading authors, and unresolved questions in the field here.</p><h2>Gaps</h2><p>Use this section to note where the literature is thin, contradictory, or methodologically limited.</p>",
       updatedAt: Date.now() - 60_000,
     }),
     createDocument({
-      title: "Thesis chapter template",
+      title: "Thesis chapter",
       content:
         "<h1>Chapter title</h1><h2>Research question</h2><p>State the chapter question and explain how it connects to the wider project.</p><h2>Method</h2><p>Outline the material, method, and analytical approach used in this chapter.</p><h2>Discussion</h2><p>Develop the evidence, interpretation, and contribution of the chapter here.</p>",
       updatedAt: Date.now() - 120_000,
+    }),
+    createDocument({
+      title: "Research proposal",
+      content:
+        "<h1>Project title</h1><h2>Problem</h2><p>Describe the research problem and why it deserves attention.</p><h2>Questions</h2><p>List the main research question and any supporting questions.</p><h2>Approach</h2><p>Outline the planned method, material, and expected contribution.</p>",
+      updatedAt: Date.now() - 180_000,
     }),
   ];
 }

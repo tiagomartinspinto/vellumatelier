@@ -1,6 +1,8 @@
 # Vellum Atelier
 
-Vellum Atelier is a local-first academic writing web app for long-form research work. It is built for thesis chapters, journal articles, literature reviews, proposals, and source-driven drafting that needs citation support without locking the writer into one operating system or one storage vendor.
+Vellum Atelier is a local-first academic writing web app for long-form research work.
+
+It is designed to feel like a quiet, trustworthy writing studio for thesis chapters, journal articles, literature reviews, and research proposals without locking the writer into one operating system or one storage vendor.
 
 ![Vellum Atelier interface preview](docs/images/interface-preview.svg)
 
@@ -22,6 +24,16 @@ Vellum Atelier is a local-first academic writing web app for long-form research 
 - generate and maintain a bibliography section automatically
 - search OpenAlex and Zotero for relevant sources
 - keep project snapshots in a GitHub repository
+
+## Local-first by default
+
+Vellum Atelier treats the browser as the writer's working desk.
+
+- drafting works locally first
+- backups are explicit
+- sync is optional
+- temporary tokens are session-only
+- the writing surface stays usable even when network-backed features are unavailable
 
 ## Run locally
 
@@ -85,6 +97,8 @@ There are two sync modes:
    - useful when you want local Git to commit and push snapshots from this machine
    - the helper can write files, commit changes, and push them to the configured repository
 
+This makes GitHub a storage and versioning layer, not a requirement for everyday writing.
+
 ## Zotero
 
 Zotero support can search either a user library or a group library.
@@ -92,6 +106,8 @@ Zotero support can search either a user library or a group library.
 - public libraries: library ID only
 - private libraries: library ID plus API key
 - private API keys remain session-only
+
+Zotero is there to support source retrieval and citation work without forcing the app to become a full reference manager.
 
 ## Browser compatibility
 
@@ -129,6 +145,16 @@ manifest.webmanifest
 - citation formatting is practical rather than fully CSL-complete
 - similarity checks are writing aids, not formal plagiarism reports
 - GitHub sync does not do collaborative merge resolution inside the app yet
+
+## Manual test checklist
+
+1. Open the app and confirm the default workspace feels writing-first, with project tools tucked behind disclosures.
+2. Refresh the page and confirm drafts restore from browser autosave.
+3. Enter a GitHub token, reload, and confirm the token is gone while the repository URL remains.
+4. Enter a Zotero API key, reload, and confirm the key is gone while the library ID remains.
+5. Export JSON, import it back, and confirm the project restores without crashing.
+6. Open Project tools and confirm export, import, GitHub, and session-token actions still work.
+7. Click Clear local data and confirm the workspace resets only after confirmation.
 
 ## Development notes
 

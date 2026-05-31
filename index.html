@@ -9,20 +9,20 @@
       name="description"
       content="Vellum Atelier is a local-first academic writing web app for theses, articles, citations, and source discovery."
     />
-    <meta name="app-build" content="2026-05-14-security-refresh" />
-    <link rel="manifest" href="manifest.webmanifest?v=20260514-1" />
-    <link rel="icon" href="assets/icon.svg?v=20260514-1" type="image/svg+xml" />
-    <link rel="stylesheet" href="styles/app.css?v=20260514-1" />
+    <meta name="app-build" content="2026-05-31-product-refinement" />
+    <link rel="manifest" href="manifest.webmanifest?v=20260531-1" />
+    <link rel="icon" href="assets/icon.svg?v=20260531-1" type="image/svg+xml" />
+    <link rel="stylesheet" href="styles/app.css?v=20260531-1" />
   </head>
   <body>
     <div class="app-shell">
       <aside class="sidebar" aria-label="Project navigation">
         <div class="brand">
-          <img class="brand-image brand-icon" src="assets/icon.svg?v=20260514-1" alt="" aria-hidden="true" />
+          <img class="brand-image brand-icon" src="assets/icon.svg?v=20260531-1" alt="" aria-hidden="true" />
           <div>
             <p class="eyebrow">Research writing studio</p>
             <h1>Vellum Atelier</h1>
-            <p class="brand-copy">For thesis chapters, articles, and literature work.</p>
+            <p class="brand-copy">A quiet place for thesis chapters, articles, and literature work.</p>
           </div>
         </div>
 
@@ -31,7 +31,7 @@
             <div class="section-head">
               <div>
                 <h2 id="libraryTitle">Library</h2>
-                <p class="section-copy">Drafts and folders for this project.</p>
+                <p class="section-copy">Drafts, templates, and folders for this project.</p>
               </div>
               <div class="quick-actions compact-actions">
                 <button id="newDocumentButton" class="primary-button" type="button">
@@ -44,7 +44,7 @@
             </div>
             <div id="folderInlinePanel" class="folder-inline-panel" hidden>
               <label for="folderNameInput">Folder name</label>
-              <input id="folderNameInput" type="text" placeholder="e.g. Literature review" />
+              <input id="folderNameInput" type="text" placeholder="e.g. Chapter drafts" />
               <button id="saveFolderButton" class="primary-button" type="button">
                 Create folder
               </button>
@@ -57,36 +57,38 @@
           <section class="sync-panel sidebar-section backup-panel" aria-labelledby="syncTitle">
             <div class="section-head storage-head">
               <div>
-                <h2 id="syncTitle">Backup</h2>
-                <p class="section-copy">Keep this project on GitHub or export a browser-safe backup.</p>
+                <h2 id="syncTitle">Project</h2>
+                <p class="section-copy">Local-first storage, backup, and sync.</p>
               </div>
             </div>
             <p id="syncState">Saved locally</p>
-            <div class="storage-actions">
-              <button id="exportButton" class="ghost-button" type="button">
-                Export Word-compatible
-              </button>
-              <button id="exportProjectButton" class="ghost-button" type="button">
-                Export JSON
-              </button>
-              <button id="importProjectButton" class="ghost-button" type="button">
-                Import JSON
-              </button>
-              <button id="githubButton" class="ghost-button" type="button">
-                Connect GitHub
-              </button>
-            </div>
-            <button id="clearLocalDataButton" class="ghost-button warning-button" type="button">
-              Reset browser data
-            </button>
-            <button id="clearSessionTokensButton" class="ghost-button" type="button">
-              Clear session tokens
-            </button>
             <p id="backupMessage" class="fine-print backup-note">
-              This app is local-first. Drafts are autosaved in this browser using localStorage,
-              which is not encrypted. GitHub tokens and private Zotero API keys stay only in the
-              current browser session.
+              Drafts are autosaved in this browser using localStorage, which is not encrypted.
+              Tokens are not stored permanently.
             </p>
+            <details class="project-tools">
+              <summary>Project tools</summary>
+              <div class="storage-actions">
+                <button id="exportButton" class="ghost-button" type="button">
+                  Export Word-compatible
+                </button>
+                <button id="exportProjectButton" class="ghost-button" type="button">
+                  Export JSON
+                </button>
+                <button id="importProjectButton" class="ghost-button" type="button">
+                  Import JSON
+                </button>
+                <button id="githubButton" class="ghost-button" type="button">
+                  Connect GitHub
+                </button>
+              </div>
+              <button id="clearSessionTokensButton" class="ghost-button" type="button">
+                Clear session tokens
+              </button>
+            </details>
+            <button id="clearLocalDataButton" class="ghost-button warning-button" type="button">
+              Clear local data
+            </button>
             <input id="importFileInput" type="file" accept="application/json,.json" hidden />
             <div id="githubInlinePanel" class="storage-panel" hidden>
               <div class="sync-summary">
@@ -110,9 +112,9 @@
                 placeholder="Fine-grained token with Contents write access"
               />
               <p id="githubSyncMessage">
-                Add a token for browser-based sync across devices. This token is kept only for the
-                current session and is never saved in localStorage. Without a token, the optional
-                local sync helper can still push every 110 seconds.
+                Add a token for browser-based sync across devices. Tokens are not stored
+                permanently. Without a token, the optional local sync helper can still push every
+                110 seconds.
               </p>
               <div class="sync-actions">
                 <button id="saveGithubRepoButton" class="primary-button" type="button">
@@ -363,10 +365,13 @@
           </div>
           <div id="focusOptions" class="focus-options"></div>
           <div id="referenceList" class="reference-list"></div>
-          <div class="search-box">
-            <input id="referenceSearch" type="search" placeholder="Search OpenAlex or Crossref" />
-            <button id="onlineSearchButton" class="small-button" type="button">Search</button>
-          </div>
+          <details class="utility-disclosure">
+            <summary>Search academic databases</summary>
+            <div class="search-box disclosure-body">
+              <input id="referenceSearch" type="search" placeholder="Search OpenAlex or Crossref" />
+              <button id="onlineSearchButton" class="small-button" type="button">Search</button>
+            </div>
+          </details>
           <p class="fine-print">Suggestions use reliable metadata sources and your current draft context.</p>
         </section>
 
@@ -400,49 +405,52 @@
             <h2>Suggested articles</h2>
           </div>
           <div id="readingList" class="reading-list"></div>
-          <div class="zotero-box">
-            <div class="panel-heading">
-              <div>
-                <p class="eyebrow">Zotero</p>
-                <h2>Your library</h2>
+          <details class="utility-disclosure zotero-disclosure">
+            <summary>Search your Zotero library</summary>
+            <div class="zotero-box disclosure-body">
+              <div class="panel-heading">
+                <div>
+                  <p class="eyebrow">Zotero</p>
+                  <h2>Your library</h2>
+                </div>
+                <button id="searchZoteroButton" class="small-button" type="button">Search</button>
               </div>
-              <button id="searchZoteroButton" class="small-button" type="button">Search</button>
+              <div class="zotero-grid">
+                <label>
+                  Library
+                  <select id="zoteroLibraryType">
+                    <option value="users">User library</option>
+                    <option value="groups">Group library</option>
+                  </select>
+                </label>
+                <label>
+                  Library ID
+                  <input id="zoteroLibraryId" type="text" placeholder="e.g. 1234567" />
+                </label>
+                <label class="span-2">
+                  API key (session only)
+                  <input
+                    id="zoteroApiKey"
+                    type="password"
+                    placeholder="Needed for private libraries"
+                  />
+                </label>
+                <label class="span-2">
+                  Search
+                  <input
+                    id="zoteroSearchInput"
+                    type="search"
+                    placeholder="Search your Zotero library by title, creator, or keyword"
+                  />
+                </label>
+              </div>
+              <p id="zoteroStatus" class="fine-print">
+                Connect a public library with its user or group ID, or add an API key for a private
+                library. Tokens are not stored permanently.
+              </p>
+              <div id="zoteroResults" class="reference-list"></div>
             </div>
-            <div class="zotero-grid">
-              <label>
-                Library
-                <select id="zoteroLibraryType">
-                  <option value="users">User library</option>
-                  <option value="groups">Group library</option>
-                </select>
-              </label>
-              <label>
-                Library ID
-                <input id="zoteroLibraryId" type="text" placeholder="e.g. 1234567" />
-              </label>
-              <label class="span-2">
-                API key (session only)
-                <input
-                  id="zoteroApiKey"
-                  type="password"
-                  placeholder="Needed for private libraries"
-                />
-              </label>
-              <label class="span-2">
-                Search
-                <input
-                  id="zoteroSearchInput"
-                  type="search"
-                  placeholder="Search your Zotero library by title, creator, or keyword"
-                />
-              </label>
-            </div>
-            <p id="zoteroStatus" class="fine-print">
-              Connect a public library with its user or group ID, or add an API key for a private
-              library. Private keys stay only for the current browser session.
-            </p>
-            <div id="zoteroResults" class="reference-list"></div>
-          </div>
+          </details>
           <p class="fine-print">
             This flags citation needs and possible source overlap while you
             write. It is a research aid, not a legal plagiarism report.
@@ -538,7 +546,7 @@
       </div>
     </div>
 
-    <script type="module" src="src/main.mjs?v=20260514-1"></script>
+    <script type="module" src="src/main.mjs?v=20260531-1"></script>
     <script>
       if ("serviceWorker" in navigator && location.protocol !== "file:") {
         window.addEventListener("load", () => {
@@ -550,7 +558,7 @@
           });
 
           navigator.serviceWorker
-            .register("./service-worker.js?v=20260514-1")
+            .register("./service-worker.js?v=20260531-1")
             .then((registration) => registration.update())
             .catch(() => {});
         });
