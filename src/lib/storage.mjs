@@ -14,6 +14,16 @@ export const defaultZoom = 100;
 
 let lastStorageIssue = "";
 
+function describeStorageIssue(error) {
+  if (error?.code === "STORAGE_UNAVAILABLE") {
+    return "Browser storage is unavailable in this session. Keep exported backups before closing this tab.";
+  }
+  if (error?.name === "QuotaExceededError") {
+    return "Browser storage is full. Export your project and clear older local data before continuing.";
+  }
+  return "Vellum Atelier could not save local data in this browser.";
+}
+
 function createId() {
   return globalThis.crypto?.randomUUID?.() || `doc-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
@@ -158,11 +168,17 @@ function storageGet(storageLike, key) {
 }
 
 function storageSet(storageLike, key, value) {
+  if (!storageLike?.setItem) {
+    lastStorageIssue = describeStorageIssue({ code: "STORAGE_UNAVAILABLE" });
+    return { ok: false, error: lastStorageIssue };
+  }
   try {
-    storageLike?.setItem?.(key, value);
-    return true;
-  } catch {
-    return false;
+    storageLike.setItem(key, value);
+    lastStorageIssue = "";
+    return { ok: true, error: "" };
+  } catch (error) {
+    lastStorageIssue = describeStorageIssue(error);
+    return { ok: false, error: lastStorageIssue };
   }
 }
 
@@ -174,12 +190,24 @@ function storageRemove(storageLike, key) {
   }
 }
 
+function persistedCustomReferences(state) {
+  const ids = new Set();
+  (state.documents || []).forEach((doc) => {
+    [...(doc.references || []), ...(doc.manualReferences || [])].forEach((id) => ids.add(id));
+  });
+
+  return Object.fromEntries(
+    Object.entries(state.customReferences || {}).filter(([id]) => ids.has(id)),
+  );
+}
+
 function bareStateForPersistence(state, activeId) {
   return {
     ...state,
     schemaVersion: STORAGE_SCHEMA_VERSION,
     appVersion: APP_VERSION,
     activeId,
+    customReferences: persistedCustomReferences(state),
     githubToken: "",
     zotero: {
       ...(state.zotero || {}),

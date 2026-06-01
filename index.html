@@ -9,12 +9,19 @@
       name="description"
       content="Vellum Atelier is a local-first academic writing web app designed for doctoral-level research writing in university contexts."
     />
-    <meta name="app-build" content="2026-05-31-doctoral-refinement" />
-    <link rel="manifest" href="manifest.webmanifest?v=20260531-2" />
-    <link rel="icon" href="assets/icon.svg?v=20260531-2" type="image/svg+xml" />
-    <link rel="stylesheet" href="styles/app.css?v=20260531-2" />
+    <meta name="app-build" content="2026-06-01-release-candidate-pass" />
+    <link rel="manifest" href="manifest.webmanifest?v=20260601-1" />
+    <link rel="icon" href="assets/icon.svg?v=20260601-1" type="image/svg+xml" />
+    <link rel="stylesheet" href="styles/app.css?v=20260601-1" />
   </head>
   <body>
+    <div id="updateBanner" class="update-banner" hidden role="status" aria-live="polite">
+      <p>A Vellum Atelier update is ready.</p>
+      <div class="update-banner-actions">
+        <button id="updateReloadButton" class="small-button" type="button">Reload now</button>
+        <button id="updateDismissButton" class="ghost-button" type="button">Later</button>
+      </div>
+    </div>
     <div class="app-shell">
       <aside class="sidebar" aria-label="Project navigation">
         <div class="brand">
@@ -66,8 +73,8 @@
                 </p>
               </div>
             </div>
-            <p id="syncState">Saved locally</p>
-            <p id="backupMessage" class="fine-print backup-note">
+            <p id="syncState" aria-live="polite">Saved locally</p>
+            <p id="backupMessage" class="fine-print backup-note" aria-live="polite">
               Drafts are autosaved in this browser using localStorage, which is not encrypted.
               Tokens are not stored permanently.
             </p>
@@ -127,22 +134,23 @@
                 </button>
                 <div class="menu-anchor sync-action-anchor">
                   <button
-                    id="githubActionsButton"
-                    class="ghost-button"
-                    type="button"
-                    aria-expanded="false"
-                    aria-controls="githubActionsMenu"
-                  >
-                    Sync actions
-                  </button>
-                  <div id="githubActionsMenu" class="dropdown-menu sync-dropdown" hidden>
-                    <button id="pushGithubRepoButton" class="menu-action" type="button">
+                  id="githubActionsButton"
+                  class="ghost-button"
+                  type="button"
+                  aria-haspopup="menu"
+                  aria-expanded="false"
+                  aria-controls="githubActionsMenu"
+                >
+                  Sync actions
+                </button>
+                  <div id="githubActionsMenu" class="dropdown-menu sync-dropdown" role="menu" hidden>
+                    <button id="pushGithubRepoButton" class="menu-action" type="button" role="menuitem">
                       Push now
                     </button>
-                    <button id="pullGithubRepoButton" class="menu-action" type="button">
+                    <button id="pullGithubRepoButton" class="menu-action" type="button" role="menuitem">
                       Pull latest
                     </button>
-                    <button id="clearGithubRepoButton" class="menu-action warning-action" type="button">
+                    <button id="clearGithubRepoButton" class="menu-action warning-action" type="button" role="menuitem">
                       Disconnect
                     </button>
                   </div>
@@ -169,19 +177,20 @@
                 id="workspaceMenuButton"
                 class="ghost-button theme-toggle"
                 type="button"
+                aria-haspopup="menu"
                 aria-expanded="false"
                 aria-controls="workspaceMenu"
               >
                 View
               </button>
-              <div id="workspaceMenu" class="dropdown-menu utility-menu" hidden>
-                <button id="themeToggleButton" class="menu-action" type="button">
+              <div id="workspaceMenu" class="dropdown-menu utility-menu" role="menu" hidden>
+                <button id="themeToggleButton" class="menu-action" type="button" role="menuitem">
                   Dark mode on
                 </button>
-                <button id="focusModeButton" class="menu-action" type="button">
+                <button id="focusModeButton" class="menu-action" type="button" role="menuitem">
                   Hide sidebars
                 </button>
-                <button id="openCommandButton" class="menu-action" type="button">
+                <button id="openCommandButton" class="menu-action" type="button" role="menuitem">
                   Quick actions
                 </button>
               </div>
@@ -190,7 +199,7 @@
           <div class="topbar-meta">
             <div class="field-chip">
               <span>Status</span>
-              <select id="docStatus">
+              <select id="docStatus" aria-label="Document status">
                 <option value="Draft">Draft</option>
                 <option value="Revising">Revising</option>
                 <option value="Supervisor review">Supervisor review</option>
@@ -265,16 +274,17 @@
                 id="textToolsButton"
                 class="ghost-button toolbar-menu-button"
                 type="button"
+                aria-haspopup="menu"
                 aria-expanded="false"
                 aria-controls="textToolsMenu"
               >
                 Text tools
               </button>
-              <div id="textToolsMenu" class="dropdown-menu toolbar-dropdown" hidden>
-                <button class="menu-action" data-command="bold" type="button" title="Bold">
+              <div id="textToolsMenu" class="dropdown-menu toolbar-dropdown" role="menu" hidden>
+                <button class="menu-action" data-command="bold" type="button" title="Bold" role="menuitem">
                   Bold
                 </button>
-                <button class="menu-action" data-command="italic" type="button" title="Italic">
+                <button class="menu-action" data-command="italic" type="button" title="Italic" role="menuitem">
                   Italic
                 </button>
                 <button
@@ -282,6 +292,7 @@
                   data-command="underline"
                   type="button"
                   title="Underline"
+                  role="menuitem"
                 >
                   Underline
                 </button>
@@ -290,6 +301,7 @@
                   data-command="insertUnorderedList"
                   type="button"
                   title="Bulleted list"
+                  role="menuitem"
                 >
                   Bulleted list
                 </button>
@@ -298,6 +310,7 @@
                   data-command="insertOrderedList"
                   type="button"
                   title="Numbered list"
+                  role="menuitem"
                 >
                   Numbered list
                 </button>
@@ -350,15 +363,15 @@
           </div>
           <div id="outlineList" class="outline-list"></div>
         </section>
-        <div class="tabs" role="tablist">
-          <button class="tab active" data-tab="references" type="button">Focus</button>
-          <button class="tab" data-tab="sources" type="button">Sources</button>
-          <button class="tab" data-tab="plan" type="button">Plan</button>
-          <button class="tab" data-tab="checks" type="button">Review</button>
-          <button class="tab" data-tab="rewrite" type="button">Revise</button>
+        <div class="tabs" role="tablist" aria-label="Assistant panels">
+          <button class="tab active" data-tab="references" id="referencesTab" role="tab" aria-selected="true" aria-controls="referencesPanel" tabindex="0" type="button">Focus</button>
+          <button class="tab" data-tab="sources" id="sourcesTab" role="tab" aria-selected="false" aria-controls="sourcesPanel" tabindex="-1" type="button">Sources</button>
+          <button class="tab" data-tab="plan" id="planTab" role="tab" aria-selected="false" aria-controls="planPanel" tabindex="-1" type="button">Plan</button>
+          <button class="tab" data-tab="checks" id="checksTab" role="tab" aria-selected="false" aria-controls="checksPanel" tabindex="-1" type="button">Review</button>
+          <button class="tab" data-tab="rewrite" id="rewriteTab" role="tab" aria-selected="false" aria-controls="rewritePanel" tabindex="-1" type="button">Revise</button>
         </div>
 
-        <section id="referencesPanel" class="panel active-panel">
+        <section id="referencesPanel" class="panel active-panel" role="tabpanel" aria-labelledby="referencesTab">
           <div class="panel-heading">
             <div>
               <p class="eyebrow">Focus map</p>
@@ -380,13 +393,13 @@
           <p class="fine-print">Suggestions use reliable metadata sources and your current draft context.</p>
         </section>
 
-        <section id="sourcesPanel" class="panel">
+        <section id="sourcesPanel" class="panel" role="tabpanel" aria-labelledby="sourcesTab" hidden>
           <div class="panel-heading">
             <div>
               <p class="eyebrow">Live cross-check</p>
               <h2>Possible citations</h2>
             </div>
-            <span id="sourceCheckStatus" class="status-pill">Watching</span>
+            <span id="sourceCheckStatus" class="status-pill" aria-live="polite">Watching</span>
           </div>
           <div class="selection-box">
             <div class="reading-heading">
@@ -449,7 +462,7 @@
                   />
                 </label>
               </div>
-              <p id="zoteroStatus" class="fine-print">
+              <p id="zoteroStatus" class="fine-print" aria-live="polite">
                 Connect a public library with its user or group ID, or add an API key for a private
                 library. Tokens are not stored permanently.
               </p>
@@ -462,7 +475,7 @@
           </p>
         </section>
 
-        <section id="planPanel" class="panel">
+        <section id="planPanel" class="panel" role="tabpanel" aria-labelledby="planTab" hidden>
           <div class="panel-heading">
             <div>
               <p class="eyebrow">Project structure</p>
@@ -556,7 +569,7 @@
           </details>
         </section>
 
-        <section id="checksPanel" class="panel">
+        <section id="checksPanel" class="panel" role="tabpanel" aria-labelledby="checksTab" hidden>
           <div class="panel-heading">
             <div>
               <p class="eyebrow">Review</p>
@@ -567,7 +580,7 @@
           <div id="checkList" class="check-list"></div>
         </section>
 
-        <section id="rewritePanel" class="panel">
+        <section id="rewritePanel" class="panel" role="tabpanel" aria-labelledby="rewriteTab" hidden>
           <div class="panel-heading">
             <div>
               <p class="eyebrow">Draft support</p>
@@ -612,23 +625,6 @@
       </div>
     </div>
 
-    <script type="module" src="src/main.mjs?v=20260531-2"></script>
-    <script>
-      if ("serviceWorker" in navigator && location.protocol !== "file:") {
-        window.addEventListener("load", () => {
-          let refreshing = false;
-          navigator.serviceWorker.addEventListener("controllerchange", () => {
-            if (refreshing) return;
-            refreshing = true;
-            window.location.reload();
-          });
-
-          navigator.serviceWorker
-            .register("./service-worker.js?v=20260531-2")
-            .then((registration) => registration.update())
-            .catch(() => {});
-        });
-      }
-    </script>
+    <script type="module" src="src/main.mjs?v=20260601-1"></script>
   </body>
 </html>

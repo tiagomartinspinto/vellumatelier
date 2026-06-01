@@ -49,6 +49,13 @@ Then open:
 http://127.0.0.1:4180
 ```
 
+For engineering checks:
+
+```bash
+npm install
+npm run check
+```
+
 The optional GitHub sync helper can run alongside the app:
 
 ```bash
@@ -123,7 +130,7 @@ Zotero is there to support source retrieval and citation work without forcing th
 
 ## Browser compatibility
 
-Best tested targets for the current prototype:
+Best tested in the current release-candidate pass:
 
 - latest Chrome
 - latest Edge

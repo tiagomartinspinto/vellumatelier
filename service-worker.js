@@ -1,15 +1,20 @@
-const CACHE_NAME = "vellum-atelier-v20260531-2";
+const CACHE_NAME = "vellum-atelier-v20260601-1";
 const APP_SHELL = [
   "./",
   "./index.html",
-  "./styles/app.css",
-  "./src/main.mjs",
-  "./src/data/reference-data.mjs",
-  "./src/lib/storage.mjs",
-  "./src/lib/reference-utils.mjs",
-  "./src/lib/text-utils.mjs",
-  "./manifest.webmanifest",
-  "./assets/icon.svg",
+  "./styles/app.css?v=20260601-1",
+  "./src/app/dom.mjs?v=20260601-1",
+  "./src/app/export-utils.mjs?v=20260601-1",
+  "./src/app/review-checks.mjs?v=20260601-1",
+  "./src/app/service-worker-client.mjs?v=20260601-1",
+  "./src/app/ui.mjs?v=20260601-1",
+  "./src/main.mjs?v=20260601-1",
+  "./src/data/reference-data.mjs?v=20260601-1",
+  "./src/lib/storage.mjs?v=20260601-1",
+  "./src/lib/reference-utils.mjs?v=20260601-1",
+  "./src/lib/text-utils.mjs?v=20260601-1",
+  "./manifest.webmanifest?v=20260601-1",
+  "./assets/icon.svg?v=20260601-1",
 ];
 
 function isAppShellRequest(requestUrl) {
@@ -31,7 +36,6 @@ self.addEventListener("install", (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL)),
   );
-  self.skipWaiting();
 });
 
 self.addEventListener("activate", (event) => {
@@ -44,7 +48,12 @@ self.addEventListener("activate", (event) => {
       ),
     ),
   );
-  self.clients.claim();
+});
+
+self.addEventListener("message", (event) => {
+  if (event.data?.type === "SKIP_WAITING") {
+    self.skipWaiting();
+  }
 });
 
 self.addEventListener("fetch", (event) => {

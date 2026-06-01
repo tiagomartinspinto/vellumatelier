@@ -2,72 +2,63 @@
 
 ## Completed changes
 
-- replaced absolute local paths in this status file with repo-relative paths
-- clarified README language that Vellum Atelier is not an official university service, including at Aalto University, unless separately deployed or approved
-- added a short privacy reminder to check institutional rules before syncing unpublished drafts to GitHub
-- reframed the product for doctoral-level research writing in university contexts
-- expanded starter templates to:
-  - dissertation chapter
-  - journal article
-  - conference paper
-  - literature review
-  - research plan
-  - funding application outline
-  - supervisor meeting notes
-  - revision response plan
-- added local-first project metadata fields:
-  - working title
-  - researcher name
-  - programme or field
-  - supervisor(s)
-  - article or chapter status
-  - target venue
-  - deadline
-  - keywords
-- added supervisor workflow fields and a supervisor-copy export
-- expanded the literature review matrix to cover citation, argument, method, theory/framework, evidence, relevance, gap, and reading status
-- strengthened writing checks for doctoral use:
-  - research question
-  - contribution
-  - methodology
-  - unsupported claims
-  - missing citations
-  - terminology drift
-  - long paragraphs
-  - weak signposting
-- improved Word-compatible export so it includes metadata, abstract structure, body content, bibliography, and a note that `.doc` is not true `.docx`
-- updated README for doctoral researchers, privacy, institutional use, and PhD workflows
+- split `src/main.mjs` responsibilities into smaller modules:
+  - `src/app/dom.mjs`
+  - `src/app/export-utils.mjs`
+  - `src/app/review-checks.mjs`
+  - `src/app/service-worker-client.mjs`
+  - `src/app/ui.mjs`
+- added ESLint plus a basic automated test suite
+- added a user-facing service-worker update banner instead of forced reloads
+- improved keyboard accessibility for tabs, menus, and the command palette
+- removed dead CSS selectors and reduced duplicate review/export logic
+- made GitHub helper commits safer by staging only paths that exist
+- made autosave more honest:
+  - persistence now reports failures clearly
+  - temporary search results are no longer written into long-term project storage
+  - transient source caches reset on import, reset, and GitHub pull
+- verified JSON import/export and storage round-trips with automated tests
 
 ## Files changed
 
 - `index.html`
-- `src/main.mjs`
-- `src/lib/storage.mjs`
-- `styles/app.css`
 - `README.md`
 - `PROJECT_STATUS.md`
+- `package.json`
+- `package-lock.json`
+- `eslint.config.mjs`
 - `service-worker.js`
+- `server/sync-server.cjs`
+- `src/main.mjs`
+- `src/lib/storage.mjs`
+- `src/app/dom.mjs`
+- `src/app/export-utils.mjs`
+- `src/app/review-checks.mjs`
+- `src/app/service-worker-client.mjs`
+- `src/app/ui.mjs`
+- `styles/app.css`
+- `tests/export-utils.test.mjs`
+- `tests/review-checks.test.mjs`
+- `tests/storage.test.mjs`
 
 ## Remaining tasks
 
+- split `src/main.mjs` further if the editor logic keeps growing
+- replace `document.execCommand` with a more durable editor command layer
 - add true `.docx` export
-- split `src/main.mjs` into smaller modules
-- add linting and basic tests
-- add a visible update-available banner for service-worker refreshes
-- improve keyboard support for some menus and disclosures
+- add broader browser-level integration tests if the app gets a build step later
 
 ## Known issues
 
-- the editor still relies on `document.execCommand`
-- GitHub browser sync still requires a token each session
-- citation formatting is useful but not yet a full CSL word-processor integration
-- review checks are heuristics, not formal academic validation
+- after code changes, use the versioned app URL or accept the update banner once so the latest service worker and module graph are active together
+- service-worker update dismissal is per session; the banner will return when the next waiting worker is detected
+- GitHub browser sync still requires a token each session by design
 
 ## Manual tests next
 
-1. Open `http://127.0.0.1:4180/index.html?v=20260531-2` and confirm the new doctoral wording appears in the sidebar and plan panel.
-2. Fill in project metadata, refresh, and confirm it restores from browser storage.
-3. Add literature matrix rows and confirm status plus text fields persist.
-4. Add supervisor notes and export both the main Word-compatible draft and the supervisor copy.
-5. Run JSON export/import and confirm the metadata, matrix, and supervisor fields survive the round trip.
-6. Check the Review panel with a sparse draft and then a cited draft to confirm the new warnings change accordingly.
+1. Open `http://127.0.0.1:4180/index.html?v=20260601-1` in Chrome, Safari, and Firefox.
+2. Confirm typing autosaves locally, survives refresh, and updates the save status honestly.
+3. Export JSON, import it back, and confirm metadata, literature matrix rows, and supervisor notes survive the round trip.
+4. Open the app in two tabs, trigger a service-worker update, and confirm the update banner appears without forcing a reload.
+5. Use only the keyboard to switch assistant tabs, open and close the command palette, and access menu actions.
+6. Link a valid GitHub repository and confirm save, push, and pull flows still behave correctly.

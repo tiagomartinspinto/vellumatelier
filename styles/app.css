@@ -81,6 +81,7 @@ body[data-theme="day"] {
 
 button,
 input,
+select,
 textarea {
   font: inherit;
 }
@@ -115,6 +116,32 @@ textarea:focus-visible,
   grid-template-columns: 252px minmax(0, 1fr) 332px;
   min-height: 100vh;
   isolation: isolate;
+}
+
+.update-banner {
+  position: sticky;
+  top: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 10px 18px;
+  background: rgba(17, 19, 22, 0.95);
+  border-bottom: 1px solid var(--line);
+  backdrop-filter: blur(18px);
+}
+
+.update-banner p {
+  margin: 0;
+  color: var(--text-soft);
+  font-size: 0.92rem;
+}
+
+.update-banner-actions {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
 }
 
 .sidebar,
@@ -708,25 +735,6 @@ body[data-theme="day"] .dropdown-menu {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 8px;
-}
-
-.sync-mode {
-  padding: 8px;
-  border-radius: 8px;
-  background: rgba(225, 196, 119, 0.16);
-  color: #f2d99a;
-  font-weight: 800;
-}
-
-.checkbox-line {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
-
-.checkbox-line input {
-  width: auto;
-  min-height: auto;
 }
 
 .workspace {

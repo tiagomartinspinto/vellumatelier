@@ -1,4 +1,25 @@
-import { referenceCorpus, topicKeywords, typoMap } from "./data/reference-data.mjs";
+import { referenceCorpus, topicKeywords, typoMap } from "./data/reference-data.mjs?v=20260601-1";
+import { getElements, projectFieldBindings } from "./app/dom.mjs?v=20260601-1";
+import {
+  buildAcademicExportHtml,
+  buildExportRoot,
+  buildSupervisorAppendixHtml,
+  exportFilename,
+  extractSection,
+  projectMetadataEntries,
+  removeBibliography,
+} from "./app/export-utils.mjs?v=20260601-1";
+import { generateReviewChecks } from "./app/review-checks.mjs?v=20260601-1";
+import { registerServiceWorkerUpdates } from "./app/service-worker-client.mjs?v=20260601-1";
+import {
+  activateTab as setActiveTab,
+  bindTabKeyboard,
+  closeCommandPalette as hideCommandPalette,
+  closeMenu,
+  openCommandPalette as showCommandPalette,
+  toggleMenu,
+  trapDialogFocus,
+} from "./app/ui.mjs?v=20260601-1";
 import {
   APP_VERSION,
   STORAGE_SCHEMA_VERSION,
@@ -19,7 +40,7 @@ import {
   normalizeState,
   parseProjectImport,
   persistState,
-} from "./lib/storage.mjs";
+} from "./lib/storage.mjs?v=20260601-1";
 import {
   detectTopic,
   focusScores,
@@ -29,7 +50,7 @@ import {
   surnameFromAuthor,
   tokenize,
   weightedOverlap,
-} from "./lib/reference-utils.mjs";
+} from "./lib/reference-utils.mjs?v=20260601-1";
 import {
   countWords,
   escapeAttribute,
@@ -38,7 +59,7 @@ import {
   slugify,
   stripHtml,
   stripTags,
-} from "./lib/text-utils.mjs";
+} from "./lib/text-utils.mjs?v=20260601-1";
 
 let state = loadState();
 let activeId = state.activeId || state.documents[0].id;
@@ -54,6 +75,7 @@ let analysisTimer = null;
 let lastLiveQuery = "";
 let lastGithubPushSignature = "";
 let contextCitationToken = null;
+let lastCommandTrigger = null;
 const referenceTokenCache = new Map();
 const githubSyncEndpoint = "http://127.0.0.1:37110/api";
 const AUTOSAVE_DELAY_MS = 220;
@@ -65,123 +87,27 @@ const ONLINE_SEARCH_FALLBACK_DELAY_MS = 1_200;
 const INPUT_EXPORT_VERSION = `${APP_VERSION} / schema ${STORAGE_SCHEMA_VERSION}`;
 const detectTopicForText = (text) => detectTopic(text, topicKeywords, referenceCorpus);
 const focusScoresForText = (text) => focusScores(text, topicKeywords, referenceCorpus);
-
-const els = {
-  documentList: document.querySelector("#documentList"),
-  outlineList: document.querySelector("#outlineList"),
-  folderInlinePanel: document.querySelector("#folderInlinePanel"),
-  folderNameInput: document.querySelector("#folderNameInput"),
-  pageCanvas: document.querySelector("#pageCanvas"),
-  editor: document.querySelector("#editor"),
-  editorContextMenu: document.querySelector("#editorContextMenu"),
-  commandPalette: document.querySelector("#commandPalette"),
-  commandInput: document.querySelector("#commandInput"),
-  commandResults: document.querySelector("#commandResults"),
-  docTitle: document.querySelector("#docTitle"),
-  workspaceMenuButton: document.querySelector("#workspaceMenuButton"),
-  workspaceMenu: document.querySelector("#workspaceMenu"),
-  themeToggleButton: document.querySelector("#themeToggleButton"),
-  focusModeButton: document.querySelector("#focusModeButton"),
-  openCommandButton: document.querySelector("#openCommandButton"),
-  closeCommandButton: document.querySelector("#closeCommandButton"),
-  projectMode: document.querySelector("#projectMode"),
-  workingTitleInput: document.querySelector("#workingTitleInput"),
-  researcherNameInput: document.querySelector("#researcherNameInput"),
-  programmeFieldInput: document.querySelector("#programmeFieldInput"),
-  supervisorsInput: document.querySelector("#supervisorsInput"),
-  projectWorkStatusInput: document.querySelector("#projectWorkStatusInput"),
-  targetVenueInput: document.querySelector("#targetVenueInput"),
-  deadlineInput: document.querySelector("#deadlineInput"),
-  keywordsInput: document.querySelector("#keywordsInput"),
-  docStatus: document.querySelector("#docStatus"),
-  citationStyleSelect: document.querySelector("#citationStyleSelect"),
-  blockStyleSelect: document.querySelector("#blockStyleSelect"),
-  fontFamilySelect: document.querySelector("#fontFamilySelect"),
-  fontSizeSelect: document.querySelector("#fontSizeSelect"),
-  lineHeightSelect: document.querySelector("#lineHeightSelect"),
-  textAlignSelect: document.querySelector("#textAlignSelect"),
-  textToolsButton: document.querySelector("#textToolsButton"),
-  textToolsMenu: document.querySelector("#textToolsMenu"),
-  zoomLevelLabel: document.querySelector("#zoomLevelLabel"),
-  wordCount: document.querySelector("#wordCount"),
-  charCount: document.querySelector("#charCount"),
-  citationCount: document.querySelector("#citationCount"),
-  topicLabel: document.querySelector("#topicLabel"),
-  referenceTopic: document.querySelector("#referenceTopic"),
-  focusOptions: document.querySelector("#focusOptions"),
-  referenceList: document.querySelector("#referenceList"),
-  sourceCheckList: document.querySelector("#sourceCheckList"),
-  sourceCheckStatus: document.querySelector("#sourceCheckStatus"),
-  readingList: document.querySelector("#readingList"),
-  selectionPreview: document.querySelector("#selectionPreview"),
-  selectionCitationList: document.querySelector("#selectionCitationList"),
-  zoteroLibraryType: document.querySelector("#zoteroLibraryType"),
-  zoteroLibraryId: document.querySelector("#zoteroLibraryId"),
-  zoteroApiKey: document.querySelector("#zoteroApiKey"),
-  zoteroSearchInput: document.querySelector("#zoteroSearchInput"),
-  zoteroStatus: document.querySelector("#zoteroStatus"),
-  zoteroResults: document.querySelector("#zoteroResults"),
-  researchQuestionInput: document.querySelector("#researchQuestionInput"),
-  subQuestionsInput: document.querySelector("#subQuestionsInput"),
-  methodologyInput: document.querySelector("#methodologyInput"),
-  contributionInput: document.querySelector("#contributionInput"),
-  meetingNotesInput: document.querySelector("#meetingNotesInput"),
-  supervisorQuestionsInput: document.querySelector("#supervisorQuestionsInput"),
-  revisionTasksInput: document.querySelector("#revisionTasksInput"),
-  nextDeadlineInput: document.querySelector("#nextDeadlineInput"),
-  supervisorCommentsInput: document.querySelector("#supervisorCommentsInput"),
-  exportSupervisorCopyButton: document.querySelector("#exportSupervisorCopyButton"),
-  literatureMatrix: document.querySelector("#literatureMatrix"),
-  checkList: document.querySelector("#checkList"),
-  syncState: document.querySelector("#syncState"),
-  githubInlinePanel: document.querySelector("#githubInlinePanel"),
-  githubButton: document.querySelector("#githubButton"),
-  githubRepoInput: document.querySelector("#githubRepoInput"),
-  githubBranchInput: document.querySelector("#githubBranchInput"),
-  githubTokenInput: document.querySelector("#githubTokenInput"),
-  githubActionsButton: document.querySelector("#githubActionsButton"),
-  githubActionsMenu: document.querySelector("#githubActionsMenu"),
-  githubModeBadge: document.querySelector("#githubModeBadge"),
-  githubDetail: document.querySelector("#githubDetail"),
-  githubSyncMessage: document.querySelector("#githubSyncMessage"),
-  rewriteModeSelect: document.querySelector("#rewriteModeSelect"),
-  runRewriteButton: document.querySelector("#runRewriteButton"),
-  rewriteOutput: document.querySelector("#rewriteOutput"),
-  backupMessage: document.querySelector("#backupMessage"),
-  exportProjectButton: document.querySelector("#exportProjectButton"),
-  importProjectButton: document.querySelector("#importProjectButton"),
-  clearLocalDataButton: document.querySelector("#clearLocalDataButton"),
-  clearSessionTokensButton: document.querySelector("#clearSessionTokensButton"),
-  importFileInput: document.querySelector("#importFileInput"),
-};
-
-const projectFieldBindings = [
-  ["projectMode", "mode", "dissertation-chapter"],
-  ["workingTitleInput", "workingTitle", ""],
-  ["researcherNameInput", "researcherName", ""],
-  ["programmeFieldInput", "programmeField", ""],
-  ["supervisorsInput", "supervisors", ""],
-  ["projectWorkStatusInput", "workStatus", "Planning"],
-  ["targetVenueInput", "targetVenue", ""],
-  ["deadlineInput", "deadline", ""],
-  ["keywordsInput", "keywords", ""],
-  ["researchQuestionInput", "researchQuestion", ""],
-  ["subQuestionsInput", "subQuestions", ""],
-  ["methodologyInput", "methodology", ""],
-  ["contributionInput", "contribution", ""],
-  ["meetingNotesInput", "meetingNotes", ""],
-  ["supervisorQuestionsInput", "supervisorQuestions", ""],
-  ["revisionTasksInput", "revisionTasks", ""],
-  ["nextDeadlineInput", "nextDeadline", ""],
-  ["supervisorCommentsInput", "supervisorComments", ""],
-];
+const els = getElements(document);
 
 function persist() {
-  persistState(state, activeId);
-  els.syncState.textContent = `Saved locally at ${new Date().toLocaleTimeString([], {
-    hour: "2-digit",
-    minute: "2-digit",
-  })}`;
+  const result = persistState(state, activeId);
+  if (!els.syncState) return result;
+
+  if (result.ok) {
+    els.syncState.textContent = `Saved locally at ${new Date().toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+    })}`;
+  } else {
+    els.syncState.textContent = "Local save needs attention";
+    setBackupMessage(
+      result.error ||
+        "Local save did not complete. Export a backup before closing this tab.",
+      "warning",
+    );
+  }
+
+  return result;
 }
 
 function schedulePersist() {
@@ -547,6 +473,7 @@ function renderApp() {
   renderReferences();
   renderSourceChecks();
   runChecks();
+  activateTab(els.tabs.find((tab) => tab.classList.contains("active"))?.dataset.tab || "references");
 }
 
 function captureCurrentDocument() {
@@ -578,7 +505,7 @@ function renderGithubState() {
     syncFieldValue(els.githubTokenInput, state.githubToken || "");
   }
   const syncMode = state.githubToken ? "Browser sync" : "Local helper";
-  const linked = Boolean(state.githubRepoUrl);
+  const linked = Boolean(parseGithubRepo(state.githubRepoUrl));
   if (els.githubModeBadge) {
     els.githubModeBadge.textContent = linked ? syncMode : "Not linked";
     els.githubModeBadge.classList.toggle("connected", linked);
@@ -626,25 +553,6 @@ function renderTheme() {
   }
 }
 
-function closeMenu(menu, button) {
-  if (!menu || !button) return;
-  menu.hidden = true;
-  button.setAttribute("aria-expanded", "false");
-}
-
-function openMenu(menu, button) {
-  if (!menu || !button) return;
-  menu.hidden = false;
-  button.setAttribute("aria-expanded", "true");
-}
-
-function toggleMenu(menu, button) {
-  if (!menu || !button) return;
-  const willOpen = menu.hidden;
-  closeFloatingMenus();
-  if (willOpen) openMenu(menu, button);
-}
-
 function closeFloatingMenus() {
   closeMenu(els.workspaceMenu, els.workspaceMenuButton);
   closeMenu(els.textToolsMenu, els.textToolsButton);
@@ -688,6 +596,12 @@ async function saveGithubRepo() {
     state.githubLastAction = "";
     persist();
     renderGithubState();
+    return;
+  }
+
+  if (!parseGithubRepo(repoUrl)) {
+    setGithubStatus("Use a valid GitHub repository URL before saving the connection.");
+    els.githubRepoInput?.focus();
     return;
   }
 
@@ -799,7 +713,7 @@ function commandItems() {
       hint: "Jump to source search for the current topic",
       run: () => {
         activateTab("references");
-        document.querySelector("#referenceSearch")?.focus();
+        els.referenceSearch?.focus();
       },
     },
     {
@@ -863,17 +777,15 @@ function renderCommandResults(filter = "") {
 function openCommandPalette() {
   if (!els.commandPalette) return;
   closeFloatingMenus();
-  els.commandPalette.hidden = false;
-  renderCommandResults("");
-  if (els.commandInput) {
-    els.commandInput.value = "";
-    els.commandInput.focus();
-  }
+  lastCommandTrigger = document.activeElement;
+  showCommandPalette(els.commandPalette, els.commandInput, () => {
+    renderCommandResults("");
+  });
 }
 
 function closeCommandPalette() {
-  if (!els.commandPalette) return;
-  els.commandPalette.hidden = true;
+  hideCommandPalette(els.commandPalette, lastCommandTrigger);
+  lastCommandTrigger = null;
 }
 
 function runCommand(commandId) {
@@ -885,7 +797,7 @@ function runCommand(commandId) {
 
 function scheduleGithubSnapshots() {
   clearInterval(githubSnapshotTimer);
-  if (!state.githubRepoUrl) return;
+  if (!parseGithubRepo(state.githubRepoUrl)) return;
   githubSnapshotTimer = setInterval(() => {
     sendGithubSnapshot("auto");
   }, GITHUB_AUTO_PUSH_INTERVAL_MS);
@@ -986,7 +898,7 @@ function githubApiUrl(pathName) {
 }
 
 async function sendGithubConfig() {
-  if (!state.githubRepoUrl) return;
+  if (!parseGithubRepo(state.githubRepoUrl)) return;
   if (state.githubToken) return;
   try {
     const response = await fetch(`${githubSyncEndpoint}/config`, {
@@ -1005,7 +917,10 @@ async function sendGithubConfig() {
 }
 
 async function sendGithubSnapshot(reason = "auto") {
-  if (!state.githubRepoUrl) return;
+  if (!parseGithubRepo(state.githubRepoUrl)) {
+    setGithubStatus("Use a valid GitHub repository URL before syncing.");
+    return;
+  }
   const payload = githubPayload(reason);
   const signature = githubSnapshotSignature(payload);
   if (reason === "auto" && signature === lastGithubPushSignature) return;
@@ -1042,7 +957,10 @@ async function sendGithubSnapshot(reason = "auto") {
 }
 
 async function pullGithubSnapshot() {
-  if (!state.githubRepoUrl) return;
+  if (!parseGithubRepo(state.githubRepoUrl)) {
+    setGithubStatus("Use a valid GitHub repository URL before pulling a snapshot.");
+    return;
+  }
   try {
     if (state.githubToken) {
       setGithubStatus("Pulling latest GitHub snapshot...");
@@ -1151,11 +1069,19 @@ function githubSyncFailureMessage(error) {
   return message || "GitHub sync failed.";
 }
 
+function resetTransientReferenceCaches() {
+  visibleReferences = [];
+  liveCrosscheckReferences = [];
+  zoteroReferences = [];
+  lastLiveQuery = "";
+}
+
 function applyGithubSnapshot(snapshot) {
   if (!snapshot.documents?.length) return;
   const sessionGithubToken = state.githubToken || "";
   const sessionZoteroApiKey = state.zotero?.apiKey || "";
   state = normalizeState(snapshot);
+  resetTransientReferenceCaches();
   state.githubToken = sessionGithubToken;
   state.zotero.apiKey = sessionZoteroApiKey;
   activeId = state.activeId && state.documents.some((doc) => doc.id === state.activeId)
@@ -1804,180 +1730,19 @@ function editorHeadings() {
     .filter(Boolean);
 }
 
-function keywordList(value = state.project?.keywords || "") {
-  return String(value)
-    .split(",")
-    .map((item) => item.trim().toLowerCase())
-    .filter(Boolean);
-}
-
-function hasMethodLanguage(text) {
-  return /\b(method|methodology|material|materials|data|interview|survey|case study|ethnograph|analysis|archive|participant|sample|corpus)\b/i.test(text);
-}
-
-function hasContributionLanguage(text) {
-  return /\b(contribution|contributes|contribute|adds to|offers a|this (article|chapter|study|paper|project) (offers|contributes|argues|demonstrates))\b/i.test(text);
-}
-
-function hasSignpostingLanguage(text) {
-  return /\b(in this section|in this chapter|in this article|the next section|the following section|first,|second,|finally,|to begin with|turning to|taken together|in what follows)\b/i.test(text);
-}
-
 function runChecks() {
   const text = textFromEditor();
-  const checks = [];
-  const lowerWords = text.toLowerCase().match(/\b[\w'-]+\b/g) || [];
-  const sourceMatches = sourceMatchesForText(currentParagraphText());
-  const paragraphTexts = editorBlocks("p, blockquote");
-  const citationTokenCount = els.editor.querySelectorAll(".citation-token").length;
-  const keywords = keywordList();
-  const headings = editorHeadings();
-  const project = state.project || {};
-
-  Object.entries(typoMap).forEach(([bad, good]) => {
-    if (lowerWords.includes(bad)) {
-      checks.push({
-        level: "warning",
-        title: `Possible typo: ${bad}`,
-        body: `Consider "${good}".`,
-      });
-    }
+  const checks = generateReviewChecks({
+    text,
+    typoMap,
+    sourceMatches: sourceMatchesForText(currentParagraphText()),
+    paragraphTexts: editorBlocks("p, blockquote"),
+    headings: editorHeadings(),
+    project: state.project || {},
+    focusScores: focusScoresForText(text),
+    hasInTextCitation,
+    citationTokenCount: els.editor.querySelectorAll(".citation-token").length,
   });
-
-  text
-    .split(/[.!?]\s+/)
-    .filter((sentence) => countWords(sentence) > 36)
-    .slice(0, 3)
-    .forEach((sentence) => {
-      checks.push({
-        level: "warning",
-        title: "Long academic sentence",
-        body: `${sentence.slice(0, 160)}...`,
-      });
-    });
-
-  paragraphTexts
-    .filter((paragraph) => countWords(paragraph) > 140)
-    .slice(0, 2)
-    .forEach((paragraph) => {
-      checks.push({
-        level: "warning",
-        title: "Overly long paragraph",
-        body: `${paragraph.slice(0, 170)}... Consider breaking this paragraph into clearer argumentative steps.`,
-      });
-    });
-
-  const aiLikePhrases = [
-    "delves into",
-    "it is important to note",
-    "in today's world",
-    "a rich tapestry",
-    "plays a crucial role",
-    "multifaceted",
-  ];
-  aiLikePhrases.forEach((phrase) => {
-    if (text.toLowerCase().includes(phrase)) {
-      checks.push({
-        level: "warning",
-        title: "Generic phrasing",
-        body: `"${phrase}" may read as generic. Replace it with a more specific academic claim.`,
-      });
-    }
-  });
-
-  const claimWords = ["shows", "proves", "demonstrates", "argues", "suggests", "indicates", "reveals"];
-  const unsupportedClaims = text
-    .split(/[.!?]\s+/)
-    .map((sentence) => sentence.trim())
-    .filter((sentence) => sentence && claimWords.some((word) => sentence.toLowerCase().includes(word)))
-    .filter((sentence) => !hasInTextCitation(sentence))
-    .slice(0, 3);
-
-  unsupportedClaims.forEach((sentence) => {
-    checks.push({
-      level: "warning",
-      title: "Unsupported claim",
-      body: `${sentence.slice(0, 160)}... Consider adding evidence or a citation.`,
-    });
-  });
-
-  if (countWords(text) > 140 && citationTokenCount === 0) {
-    checks.push({
-      level: "warning",
-      title: "Missing citations",
-      body: "This draft is substantial enough to benefit from at least one explicit citation or note to source material.",
-    });
-  }
-
-  if (!project.researchQuestion?.trim()) {
-    checks.push({
-      level: "warning",
-      title: "Research question is unclear",
-      body: "Add a main research question in Project plan so the draft and review checks have a clearer anchor.",
-    });
-  }
-
-  if (!project.contribution?.trim() && !hasContributionLanguage(text)) {
-    checks.push({
-      level: "warning",
-      title: "Missing contribution statement",
-      body: "The draft does not yet make its contribution explicit. State what this chapter, article, or plan adds to the discussion.",
-    });
-  }
-
-  if ((!project.methodology?.trim() || project.methodology.trim().length < 18) && !hasMethodLanguage(text)) {
-    checks.push({
-      level: "warning",
-      title: "Methodology explanation looks thin",
-      body: "Add a clearer account of material, method, or analytical approach so readers can understand how the argument is supported.",
-    });
-  }
-
-  if (keywords.length) {
-    const missingKeywords = keywords.filter((keyword) => !text.toLowerCase().includes(keyword));
-    if (missingKeywords.length > 0 && missingKeywords.length < keywords.length) {
-      checks.push({
-        level: "warning",
-        title: "Terminology may be drifting",
-        body: `Some project keywords are not appearing in the draft yet: ${missingKeywords.slice(0, 4).join(", ")}.`,
-      });
-    }
-  } else {
-    const focusSpread = focusScoresForText(text)
-      .filter((item) => item.score >= 10)
-      .slice(0, 3);
-    if (focusSpread.length === 3 && focusSpread[0].score - focusSpread[2].score <= 7) {
-      checks.push({
-        level: "warning",
-        title: "Terminology may be inconsistent",
-        body: `The draft is currently split across ${focusSpread.map((item) => item.topic).join(", ")}. Check whether your core terms are named consistently.`,
-      });
-    }
-  }
-
-  if (headings.length >= 3 && !hasSignpostingLanguage(text)) {
-    checks.push({
-      level: "warning",
-      title: "Signposting between sections is light",
-      body: "With several sections already in place, add a few guiding sentences that explain how one section leads to the next.",
-    });
-  }
-
-  if (sourceMatches[0]?.score >= 0.28) {
-    checks.push({
-      level: "warning",
-      title: "Possible source overlap",
-      body: `The active paragraph is close to ${sourceMatches[0].ref.title}. Add a citation and revise if the wording follows the source too closely.`,
-    });
-  }
-
-  if (checks.length === 0) {
-    checks.push({
-      level: "ok",
-      title: "No urgent issues",
-      body: "The current pass looks sound for question, method, contribution, and citation coverage.",
-    });
-  }
 
   els.checkList.innerHTML = checks
     .map(
@@ -2173,7 +1938,7 @@ async function searchZotero(query = els.zoteroSearchInput.value.trim() || getSel
 
   els.zoteroStatus.textContent = "Searching Zotero...";
   state.zotero.searchQuery = query;
-  persist();
+  schedulePersist();
 
   const params = new URLSearchParams({
     q: query,
@@ -2194,10 +1959,6 @@ async function searchZotero(query = els.zoteroSearchInput.value.trim() || getSel
     }
     const data = await response.json();
     zoteroReferences = (data || []).map(normalizeZoteroItem);
-    zoteroReferences.forEach((ref) => {
-      state.customReferences[ref.id] = ref;
-    });
-    persist();
     els.zoteroStatus.textContent = `Found ${zoteroReferences.length} Zotero item${zoteroReferences.length === 1 ? "" : "s"}.`;
     renderZoteroResults(zoteroReferences);
     renderSelectionCitations();
@@ -2212,7 +1973,7 @@ async function searchZotero(query = els.zoteroSearchInput.value.trim() || getSel
 }
 
 async function onlineSearch() {
-  const query = document.querySelector("#referenceSearch").value.trim() || detectTopicForText(textFromEditor());
+  const query = els.referenceSearch?.value.trim() || detectTopicForText(textFromEditor());
   if (!query) return;
 
   els.referenceList.innerHTML =
@@ -2289,10 +2050,6 @@ async function liveAcademicSearch() {
         : "Live academic metadata match."),
       preview: abstractFromOpenAlex(work) || previewFromWork(work),
     }));
-    liveCrosscheckReferences.forEach((ref) => {
-      state.customReferences[ref.id] = ref;
-    });
-    persist();
     renderSourceChecks();
   } catch {
     els.sourceCheckStatus.textContent = "Offline";
@@ -2346,164 +2103,27 @@ function downloadBlob(blob, filename) {
   URL.revokeObjectURL(url);
 }
 
-function exportFilename(doc = activeDocument(), suffix = "") {
-  const base = doc.title.replace(/[^\w-]+/g, "-").toLowerCase() || "document";
-  return `${base}${suffix}.doc`;
-}
-
-function projectMetadataEntries(doc = activeDocument()) {
-  const project = state.project || {};
-  return [
-    ["Document type", project.mode],
-    ["Draft status", doc.status || project.workStatus || ""],
-    ["Project status", project.workStatus],
-    ["Researcher", project.researcherName],
-    ["Programme or field", project.programmeField],
-    ["Supervisor(s)", project.supervisors],
-    ["Target venue", project.targetVenue],
-    ["Deadline", project.deadline],
-    ["Keywords", project.keywords],
-    ["Citation style", doc.style?.toUpperCase?.() || "APA"],
-  ].filter(([, value]) => String(value || "").trim());
-}
-
-function humanizeProjectMode(value = "") {
-  return String(value || "")
-    .split("-")
-    .filter(Boolean)
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(" ");
-}
-
-function buildExportRoot(doc = activeDocument()) {
-  const root = document.createElement("div");
-  root.innerHTML = doc.content;
-  return root;
-}
-
-function extractSection(root, matcher) {
-  const headings = Array.from(root.querySelectorAll("h1, h2, h3, h4"));
-  const heading = headings.find((item) => matcher(item.textContent.trim().toLowerCase()));
-  if (!heading) return "";
-
-  const sectionNodes = [];
-  let sibling = heading.nextElementSibling;
-  while (sibling && !/^H[1-4]$/.test(sibling.tagName)) {
-    sectionNodes.push(sibling);
-    sibling = sibling.nextElementSibling;
-  }
-
-  const html = sectionNodes.map((node) => node.outerHTML).join("");
-  heading.remove();
-  sectionNodes.forEach((node) => node.remove());
-  return html.trim();
-}
-
-function removeBibliography(root) {
-  const bibliography = root.querySelector("[data-bibliography-section='true']");
-  if (!bibliography) return "";
-  const html = bibliography.innerHTML.trim();
-  bibliography.remove();
-  return html;
-}
-
-function buildAcademicExportHtml({
-  title,
-  subtitle = "",
-  metadataEntries = [],
-  abstractHtml = "",
-  bodyHtml = "",
-  bibliographyHtml = "",
-  appendixHtml = "",
-}) {
-  const metadataHtml = metadataEntries.length
-    ? `<dl class="export-metadata">${metadataEntries
-        .map(
-          ([label, value]) =>
-            `<div><dt>${escapeHtml(label)}</dt><dd>${escapeHtml(
-              label === "Document type" ? humanizeProjectMode(value) : String(value),
-            )}</dd></div>`,
-        )
-        .join("")}</dl>`
-    : "";
-
-  return `<!doctype html>
-<html>
-  <head>
-    <meta charset="utf-8" />
-    <title>${escapeHtml(title)}</title>
-    <style>
-      body { font-family: "Times New Roman", Times, serif; color: #111; line-height: 1.55; margin: 36px; }
-      h1, h2, h3 { margin: 0 0 14px; }
-      h1 { font-size: 24px; }
-      h2 { font-size: 16px; margin-top: 30px; }
-      h3 { font-size: 14px; margin-top: 22px; }
-      p, li, blockquote { font-size: 12pt; }
-      blockquote { margin: 0 0 0 18px; padding-left: 14px; border-left: 2px solid #b5b5b5; }
-      .export-kicker { margin: 0 0 10px; color: #555; font-size: 10pt; text-transform: uppercase; }
-      .export-subtitle { margin: 0 0 22px; color: #444; }
-      .export-metadata { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 18px; margin: 0 0 24px; }
-      .export-metadata div { break-inside: avoid; }
-      .export-metadata dt { font-weight: 700; font-size: 10pt; color: #555; }
-      .export-metadata dd { margin: 4px 0 0; font-size: 11pt; }
-      .export-section { margin-top: 28px; }
-      .export-note { margin-top: 34px; color: #555; font-size: 10pt; }
-    </style>
-  </head>
-  <body>
-    <p class="export-kicker">Vellum Atelier Word-compatible export</p>
-    <h1>${escapeHtml(title)}</h1>
-    ${subtitle ? `<p class="export-subtitle">${escapeHtml(subtitle)}</p>` : ""}
-    ${metadataHtml}
-    ${abstractHtml ? `<section class="export-section"><h2>Abstract</h2>${abstractHtml}</section>` : ""}
-    <section class="export-section">${bodyHtml}</section>
-    ${appendixHtml ? `<section class="export-section"><h2>Supervisor workflow</h2>${appendixHtml}</section>` : ""}
-    ${bibliographyHtml ? `<section class="export-section"><h2>Bibliography</h2>${bibliographyHtml}</section>` : ""}
-    <p class="export-note">This export is Word-compatible HTML saved with a .doc extension. It is not a true .docx file.</p>
-  </body>
-</html>`;
-}
-
 function exportDoc() {
   saveCurrentDocument();
   const doc = activeDocument();
-  const root = buildExportRoot(doc);
+  const root = buildExportRoot(doc, document);
   const abstractHtml = extractSection(root, (heading) => heading === "abstract");
   const bibliographyHtml = removeBibliography(root);
-  const supervisorAppendix = buildSupervisorAppendixHtml();
+  const supervisorAppendix = buildSupervisorAppendixHtml(state.project || {});
   const html = buildAcademicExportHtml({
     title: doc.title,
     subtitle: state.project?.workingTitle || "",
-    metadataEntries: projectMetadataEntries(doc),
+    metadataEntries: projectMetadataEntries(doc, state.project || {}),
     abstractHtml,
     bodyHtml: root.innerHTML,
     bibliographyHtml,
     appendixHtml: supervisorAppendix,
   });
   const blob = new Blob([html], { type: "application/msword" });
-  downloadBlob(blob, exportFilename(doc));
+  downloadBlob(blob, exportFilename(doc.title));
   setBackupMessage(
     "Word-compatible (.doc) export downloaded. It is not a true .docx file and may contain sensitive draft, metadata, and bibliography data.",
   );
-}
-
-function buildSupervisorAppendixHtml() {
-  const project = state.project || {};
-  const items = [
-    ["Meeting notes", project.meetingNotes],
-    ["Questions for supervisor", project.supervisorQuestions],
-    ["Revision tasks", project.revisionTasks],
-    ["Next deadline", project.nextDeadline],
-    ["Supervisor comments", project.supervisorComments],
-  ].filter(([, value]) => String(value || "").trim());
-
-  if (!items.length) return "";
-
-  return items
-    .map(
-      ([label, value]) => `<section><h3>${escapeHtml(label)}</h3><p>${escapeHtml(String(value)).replace(/\n/g, "<br />")}</p></section>`,
-    )
-    .join("");
 }
 
 function exportSupervisorCopy() {
@@ -2512,12 +2132,14 @@ function exportSupervisorCopy() {
   const html = buildAcademicExportHtml({
     title: `${doc.title} — supervisor copy`,
     subtitle: state.project?.workingTitle || "",
-    metadataEntries: projectMetadataEntries(doc),
+    metadataEntries: projectMetadataEntries(doc, state.project || {}),
     bodyHtml: `<p>This supervisor copy contains the current draft metadata and the supervision workflow notes prepared in Vellum Atelier.</p>`,
-    appendixHtml: buildSupervisorAppendixHtml() || "<p>No supervisor workflow notes have been added yet.</p>",
+    appendixHtml:
+      buildSupervisorAppendixHtml(state.project || {}) ||
+      "<p>No supervisor workflow notes have been added yet.</p>",
   });
   const blob = new Blob([html], { type: "application/msword" });
-  downloadBlob(blob, exportFilename(doc, "-supervisor-copy"));
+  downloadBlob(blob, exportFilename(doc.title, "-supervisor-copy"));
   setBackupMessage(
     "Supervisor copy exported as a Word-compatible (.doc) file with project metadata and supervision notes.",
   );
@@ -2544,6 +2166,7 @@ async function importProjectJson(file) {
     if (!confirm("Replace the current workspace with the imported project?")) return;
     state = normalizeState(imported.state);
     activeId = state.activeId || state.documents[0]?.id;
+    resetTransientReferenceCaches();
     persist();
     renderApp();
     renderTheme();
@@ -2564,6 +2187,7 @@ function clearLocalDataAndReset() {
   clearPersistedState();
   state = createDefaultState();
   activeId = state.activeId || state.documents[0]?.id;
+  resetTransientReferenceCaches();
   persist();
   renderApp();
   renderTheme();
@@ -2571,10 +2195,7 @@ function clearLocalDataAndReset() {
 }
 
 function activateTab(tabName) {
-  document.querySelectorAll(".tab").forEach((item) => item.classList.remove("active"));
-  document.querySelectorAll(".panel").forEach((panel) => panel.classList.remove("active-panel"));
-  document.querySelector(`.tab[data-tab="${tabName}"]`)?.classList.add("active");
-  document.querySelector(`#${tabName}Panel`)?.classList.add("active-panel");
+  setActiveTab(tabName, els.tabs, els.panels);
 }
 
 function removeCitationToken(token) {
@@ -2818,11 +2439,12 @@ document.querySelector("#zoomOutButton")?.addEventListener("click", () => adjust
 document.querySelector("#zoomInButton")?.addEventListener("click", () => adjustZoom(10));
 document.querySelector("#insertCitationButton")?.addEventListener("click", quickInsertCitation);
 
-document.querySelectorAll(".tab").forEach((tab) => {
+els.tabs.forEach((tab) => {
   tab.addEventListener("click", () => {
     activateTab(tab.dataset.tab);
   });
 });
+bindTabKeyboard(els.tabs, activateTab);
 
 els.referenceList.addEventListener("click", (event) => {
   const citeId = event.target.dataset?.cite;
@@ -2863,7 +2485,7 @@ els.selectionCitationList?.addEventListener("click", (event) => {
   if (event.target.dataset?.searchSelection) {
     const selectedText = getSelectedText();
     if (!selectedText) return;
-    document.querySelector("#referenceSearch").value = selectedText;
+    els.referenceSearch.value = selectedText;
     activateTab("references");
     onlineSearch();
   }
@@ -2901,14 +2523,14 @@ document.querySelector("#searchZoteroButton")?.addEventListener("click", () => s
 document.querySelector("#useSelectionForSearchButton")?.addEventListener("click", () => {
   const selectedText = getSelectedText();
   if (!selectedText) return;
-  document.querySelector("#referenceSearch").value = selectedText;
+  els.referenceSearch.value = selectedText;
   els.zoteroSearchInput.value = selectedText;
   activateTab("references");
   onlineSearch();
   if (state.zotero?.libraryId) searchZotero(selectedText);
 });
 
-document.querySelector("#referenceSearch")?.addEventListener("keydown", (event) => {
+els.referenceSearch?.addEventListener("keydown", (event) => {
   if (event.key === "Enter") {
     event.preventDefault();
     onlineSearch();
@@ -2942,13 +2564,13 @@ els.focusModeButton?.addEventListener("click", toggleFocusMode);
 els.openCommandButton?.addEventListener("click", openCommandPalette);
 els.closeCommandButton?.addEventListener("click", closeCommandPalette);
 els.workspaceMenuButton?.addEventListener("click", () => {
-  toggleMenu(els.workspaceMenu, els.workspaceMenuButton);
+  toggleMenu(els.workspaceMenu, els.workspaceMenuButton, closeFloatingMenus);
 });
 els.textToolsButton?.addEventListener("click", () => {
-  toggleMenu(els.textToolsMenu, els.textToolsButton);
+  toggleMenu(els.textToolsMenu, els.textToolsButton, closeFloatingMenus);
 });
 els.githubActionsButton?.addEventListener("click", () => {
-  toggleMenu(els.githubActionsMenu, els.githubActionsButton);
+  toggleMenu(els.githubActionsMenu, els.githubActionsButton, closeFloatingMenus);
 });
 
 [els.themeToggleButton, els.focusModeButton, els.openCommandButton].forEach((button) => {
@@ -2999,6 +2621,10 @@ els.commandPalette?.addEventListener("click", (event) => {
   }
 });
 
+els.commandPalette?.addEventListener("keydown", (event) => {
+  trapDialogFocus(event, els.commandPalette, closeCommandPalette);
+});
+
 document.addEventListener("click", (event) => {
   if (!event.target.closest(".menu-anchor")) {
     closeFloatingMenus();
@@ -3031,7 +2657,7 @@ els.editorContextMenu?.addEventListener("click", (event) => {
   if (event.target.dataset?.contextSearch) {
     const selectedText = getSelectedText();
     if (selectedText) {
-      document.querySelector("#referenceSearch").value = selectedText;
+      els.referenceSearch.value = selectedText;
       activateTab("references");
       onlineSearch();
     }
@@ -3084,10 +2710,27 @@ window.addEventListener("beforeunload", () => {
   flushPersist();
 });
 
+window.addEventListener("pagehide", () => {
+  captureCurrentDocument();
+  flushPersist();
+});
+
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState !== "hidden") return;
+  captureCurrentDocument();
+  flushPersist();
+});
+
 renderApp();
 renderTheme();
 persist();
 scheduleGithubSnapshots();
+registerServiceWorkerUpdates({
+  banner: els.updateBanner,
+  reloadButton: els.updateReloadButton,
+  dismissButton: els.updateDismissButton,
+  serviceWorkerUrl: "./service-worker.js?v=20260601-1",
+});
 
 const initialStorageIssue = getLastStorageIssue();
 if (initialStorageIssue) {

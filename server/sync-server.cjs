@@ -169,7 +169,15 @@ function projectPlanMarkdown(payload) {
   const project = payload.project || {};
   return `# Project Plan
 
-Mode: ${project.mode || "thesis"}
+Project type: ${project.mode || "dissertation-chapter"}
+Working title: ${project.workingTitle || ""}
+Researcher: ${project.researcherName || ""}
+Programme or field: ${project.programmeField || ""}
+Supervisor(s): ${project.supervisors || ""}
+Project status: ${project.workStatus || ""}
+Target venue: ${project.targetVenue || ""}
+Deadline: ${project.deadline || ""}
+Keywords: ${project.keywords || ""}
 
 ## Main Research Question
 
@@ -186,20 +194,44 @@ ${project.methodology || ""}
 ## Contribution
 
 ${project.contribution || ""}
+
+## Meeting Notes
+
+${project.meetingNotes || ""}
+
+## Questions for Supervisor
+
+${project.supervisorQuestions || ""}
+
+## Revision Tasks
+
+${project.revisionTasks || ""}
+
+## Next Deadline
+
+${project.nextDeadline || ""}
+
+## Supervisor Comments
+
+${project.supervisorComments || ""}
 `;
 }
 
 function literatureMatrixMarkdown(payload) {
   const rows = payload.literatureMatrix || [];
-  const header = "| Source | Theory | Method | Finding | Relevance |\n|---|---|---|---|---|";
+  const header =
+    "| Citation | Status | Key argument | Method | Theory/framework | Evidence/material | Relevance | Gap/critique |\n|---|---|---|---|---|---|---|---|";
   const body = rows
     .map((row) =>
       [
-        row.source,
-        row.theory,
+        row.citation || row.source,
+        row.status,
+        row.keyArgument || row.finding,
         row.method,
-        row.finding,
+        row.framework || row.theory,
+        row.evidence,
         row.relevance,
+        row.gap,
       ]
         .map((value) => String(value || "").replace(/\n/g, "<br>").replace(/\|/g, "\\|"))
         .join(" | "),
@@ -224,9 +256,7 @@ function escapeHtml(value) {
 
 async function commitAndPush(reason, repoUrl, branch = "main") {
   await ensureGit(repoUrl, branch);
-  await runGit([
-    "add",
-    "-f",
+  const trackedPaths = [
     "github-export",
     "README.md",
     "index.html",
@@ -245,7 +275,9 @@ async function commitAndPush(reason, repoUrl, branch = "main") {
     "CHANGELOG.md",
     "CONTRIBUTING.md",
     "docs",
-  ]);
+  ].filter((entry) => fs.existsSync(path.join(root, entry)));
+
+  await runGit(["add", "-f", ...trackedPaths]);
 
   const status = await runGit(["status", "--porcelain"]);
   if (!status.trim()) {
